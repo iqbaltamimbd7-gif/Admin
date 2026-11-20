@@ -1,0 +1,22 @@
+SAYMA BUILDERS — TWO ANDROID APPS VALIDATION
+=============================================
+
+PASS — Admin Android login URL points to /portal/login.html?next=mobile
+PASS — Admin Android dashboard URL points to /portal/mobile/
+PASS — Admin Android WebView host/path and bundled offline asset prefix updated
+PASS — Admin mobile API configuration forces same-origin /portal/api.php
+PASS — Existing Admin IndexedDB/offline queue/merge implementation retained
+PASS — Worker app has separate Android application ID and native login preference
+PASS — Worker app login/dashboard URLs point to /portal/worker/
+PASS — Worker app bundles the latest Worker Portal login/dashboard assets
+PASS — Worker app uses same-origin /portal/api.php
+PASS — Worker dashboard, salary metadata and bank-account data cached in IndexedDB
+PASS — Worker salary slip and payment receipt files cached after first online view
+PASS — Worker local private cache cleared on sign out
+PASS — JavaScript syntax checks (Admin and Worker app assets)
+PASS — Android XML and JSON manifest parsing
+PASS — Old admin subdomain references removed from both app source projects
+NOT RUN — Android Gradle/APK compilation (Android SDK and Gradle are not installed here)
+NOT RUN — Live server/PHP session/MySQL and physical-device offline tests
+
+Note: the ZIP contains complete Android Studio source projects and a GitHub Actions workflow. APK binaries are not included because this environment does not have Android SDK/Gradle available for compilation.

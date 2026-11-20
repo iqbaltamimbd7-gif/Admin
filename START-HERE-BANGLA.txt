@@ -1,0 +1,53 @@
+SAYMA BUILDERS — TWO ANDROID APPS
+=================================
+
+এই ZIP-এর ভিতরে দুটি আলাদা Android Studio project আছে:
+
+1) admin-app/
+   Existing Admin Android app. Only domain/path/API URL config was updated.
+   Existing offline-first IndexedDB snapshot, merge, pending queue and service-worker
+   behaviour has been retained.
+
+2) worker-app/
+   Separate SAYMA Worker Android app, with its own Android application ID, native
+   session preference, Worker login, Worker dashboard and bundled Worker Portal assets.
+
+CURRENT LIVE URLS
+-----------------
+Portal base:   https://saymabuilders.com/portal/
+Admin login:   https://saymabuilders.com/portal/login.html?next=mobile
+Desktop Admin: https://saymabuilders.com/portal/desktop
+Mobile Admin:  https://saymabuilders.com/portal/mobile/
+Worker login:  https://saymabuilders.com/portal/worker/login.html
+Worker app:    https://saymabuilders.com/portal/worker/index.html
+Shared API:    https://saymabuilders.com/portal/api.php
+
+IMPORTANT
+---------
+- Both apps use the same live PHP API and MySQL database through their respective
+  same-origin portal paths.
+- Admin app ID:  com.saymabuilders.mobile
+- Worker app ID: com.saymabuilders.worker
+  They can be installed together on one Android phone.
+- No database password, config.php or SQL database is bundled in either Android app.
+- Worker app offline data is cached after a successful authenticated online sign-in.
+  Salary slip files are cached for offline viewing after they are opened once online.
+- Worker payment proof and bank-account requests still require Internet to submit.
+- Keep the existing server folder structure and api.php in /portal/.
+
+BUILD BOTH APKs
+---------------
+1. ZIP Extract করো।
+2. Extract করা সব ফাইল/ফোল্ডার একটি PRIVATE GitHub repository-তে upload/push করো (ZIP file-টি শুধু upload করলে GitHub নিজে extract করবে না)।
+3. Open GitHub > Actions.
+4. Run "Build SAYMA Admin and Worker APKs".
+5. Download the artifact named SAYMA-ADMIN-AND-WORKER-APKS.
+6. It contains one debug APK for Admin and one for Worker.
+
+LOCAL BUILD
+-----------
+Open admin-app or worker-app separately in Android Studio.
+Use JDK 17 and Android SDK Platform 36, then Build > Build APK(s).
+
+This environment has Java but no Android SDK or Gradle executable, so the APK binaries
+could not be compiled here. The source projects and cloud build workflow are included.

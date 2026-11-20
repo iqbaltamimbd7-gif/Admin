@@ -1,0 +1,22 @@
+SAYMA BUILDERS R4.1 SOURCE CHECKS
+PASS — PHP lint api.php
+PASS — PHP lint config.php
+PASS — PHP lint profile.php
+PASS — PHP lint reminders.php
+PASS — JS syntax app.js
+PASS — JS syntax data-layer.js
+PASS — JS syntax motion.js
+PASS — JS syntax sw.js
+PASS — JS syntax data/seed.js
+PASS — client API action names match existing api.php
+PASS — profile.php get/save/change_password routes found
+PASS — reminders.php get/save/preview routes found
+PASS — project financial changes have their own offline queue
+PASS — worker payment changes preserved before ledger reconciliation
+PASS — document and receipt cache keys support offline preview
+PASS — login-session expiry detected and re-login route retained
+PASS — service worker does not cache PHP/API responses
+PASS — mobile API path remains ../api.php
+PASS — no PHP backend/config/database credentials included in deliverable ZIPs
+PASS — 3-way merge tests
+NOT TESTED — live server/MySQL, actual uploads, Android device runtime and compiled APK

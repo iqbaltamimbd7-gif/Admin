@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Sayma" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:colorAccent">@color/sayma_orange</item>
+        <item name="android:statusBarColor">@color/sayma_cream</item>
+        <item name="android:navigationBarColor">@color/sayma_charcoal</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:windowBackground">@color/sayma_cream</item>
+    </style>
+    <style name="Theme.Sayma.Splash" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:colorAccent">@color/sayma_orange</item>
+        <item name="android:statusBarColor">@color/sayma_cream</item>
+        <item name="android:navigationBarColor">@color/sayma_charcoal</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowBackground">@drawable/splash_screen</item>
+    </style>
+</resources>
