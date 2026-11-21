@@ -54,7 +54,11 @@ private fun Root() {
                 val username = adminStatus.optString("username", "Administrator")
                 val profile = try { api.adminProfile().optJSONObject("profile") } catch (_: Exception) { null }
                 val displayName = profile?.optString("name")?.trim().orEmpty()
-                val photo = profile?.optString("photo")?.takeIf { it.isNotBlank() && it != "null" }
+                val photo = profile?.let { p ->
+                    listOf("photo", "photo_url", "profile_photo", "avatar").firstNotNullOfOrNull { key ->
+                        p.optString(key).trim().takeIf { it.isNotBlank() && it != "null" }
+                    }
+                }
                 Session.Admin(username, displayName.ifBlank { friendlyAdminName(username) }, photo)
             } else {
                 val workerStatus = try {

@@ -1,5 +1,6 @@
 package com.sayma.builders.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -44,113 +45,154 @@ fun LoginScreen(onLoggedIn: () -> Unit) {
     var server by remember { mutableStateOf(api.baseUrl) }
     var registering by remember { mutableStateOf(false) }
     var showPassword by remember { mutableStateOf(false) }
+    var showLoginForm by remember { mutableStateOf(false) }
+    var returnToLoginForm by remember { mutableStateOf(false) }
 
+    BackHandler(enabled = showLoginForm && !registering) {
+        showLoginForm = false
+        message = ""
+    }
     if (registering) {
-        RegisterScreen(onBack = { registering = false })
+        RegisterScreen(onBack = { registering = false; showLoginForm = returnToLoginForm })
         return
     }
 
-    Box(Modifier.fillMaxSize().background(Color(0xFFDCDDEB))) {
-        Column(
-            Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()
-                .verticalScroll(rememberScrollState())
-        ) {
-            Box(Modifier.fillMaxWidth().height(286.dp)) {
+    if (!showLoginForm) {
+        Box(Modifier.fillMaxSize().background(Color(0xFFDCDDEB)).statusBarsPadding().navigationBarsPadding()) {
+            Box(Modifier.fillMaxSize().widthIn(max = 520.dp).align(Alignment.Center)) {
                 LoginIllustration(Modifier.fillMaxSize())
-                Column(Modifier.align(Alignment.TopStart).padding(start = 25.dp, top = 26.dp)) {
-                    Text("HELLO", color = Color(0xFF111642), fontSize = 32.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-.8).sp)
-                    Text("Welcome back to your workspace", color = Color(0xFF27345F), fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                Column(Modifier.align(Alignment.TopStart).padding(start = 25.dp, top = 42.dp)) {
+                    Text("HELLO", color = Color(0xFF111642), fontSize = 34.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-.8).sp)
+                    Text("Welcome to your workspace", color = Color(0xFF27345F), fontSize = 11.sp, fontWeight = FontWeight.Medium)
                     Spacer(Modifier.height(7.dp))
                     Text("CYBER BUILDERS PORTAL", color = Color(0xFF315A8B), fontSize = 8.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.4.sp)
                 }
-                Text("SAYMA BUILDERS", color = Color(0xFF24416C), fontSize = 10.sp, fontWeight = FontWeight.ExtraBold,
-                    modifier = Modifier.align(Alignment.BottomEnd).padding(end = 22.dp, bottom = 27.dp))
+                Column(
+                    Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 22.dp).padding(bottom = 42.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Button(
+                        onClick = { showLoginForm = true; message = "" },
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                        shape = CircleShape,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF202F66))
+                    ) { Text("Sign In", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+                    Spacer(Modifier.height(10.dp))
+                    Button(
+                        onClick = { returnToLoginForm = false; registering = true },
+                        modifier = Modifier.fillMaxWidth().height(46.dp),
+                        shape = CircleShape,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.White)
+                    ) { Text("Sign Up", color = Color(0xFF202F66), fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+                }
             }
-
-            Column(
-                Modifier.fillMaxWidth().offset(y = (-22).dp)
-                    .shadow(18.dp, RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp))
-                    .clip(RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp))
-                    .background(Color.White)
-                    .padding(horizontal = 24.dp, vertical = 22.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text("Sign In", color = Color(0xFF17234D), fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
-                Spacer(Modifier.height(4.dp))
-                Text("Enter your company account details to continue", color = Color(0xFF9298A8), fontSize = 11.sp, textAlign = TextAlign.Center)
-                Spacer(Modifier.height(19.dp))
-                LoginField(identifier, { identifier = it; message = "" }, "Email / username / mobile", keyboard = KeyboardType.Email)
-                Spacer(Modifier.height(9.dp))
-                LoginField(password, { password = it; message = "" }, "Password", password = !showPassword, trailing = {
-                    TextButton(onClick = { showPassword = !showPassword }, contentPadding = PaddingValues(horizontal = 5.dp, vertical = 0.dp)) {
-                        Text(if (showPassword) "Hide" else "Show", color = Color(0xFF6F7895), fontSize = 10.sp)
+        }
+    } else {
+        Box(Modifier.fillMaxSize().background(Color(0xFFDCDDEB)).statusBarsPadding().navigationBarsPadding()) {
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding()) {
+                Box(Modifier.fillMaxWidth().height(238.dp)) {
+                    LoginIllustration(Modifier.fillMaxSize())
+                    Column(Modifier.align(Alignment.TopStart).padding(start = 24.dp, top = 28.dp)) {
+                        Text("HELLO", color = Color(0xFF111642), fontSize = 29.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-.8).sp)
+                        Text("Welcome back", color = Color(0xFF27345F), fontSize = 11.sp, fontWeight = FontWeight.Medium)
                     }
-                })
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = { isError = true; message = "Please contact your administrator to reset your password." }, contentPadding = PaddingValues(horizontal = 2.dp, vertical = 2.dp)) {
-                        Text("Forgot password?", color = Color(0xFF27345F), fontSize = 10.sp, fontWeight = FontWeight.Medium)
+                    TextButton(onClick = { showLoginForm = false; message = "" }, modifier = Modifier.align(Alignment.TopEnd).padding(top = 12.dp, end = 14.dp)) {
+                        Text("← Back", color = Color(0xFF27345F), fontWeight = FontWeight.Bold, fontSize = 11.sp)
                     }
                 }
-                if (message.isNotBlank()) {
-                    Text(message, color = if (isError) Color(0xFFCA4655) else Color(0xFF2E9E6B), fontSize = 11.sp, modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp))
-                }
-                Button(
-                    onClick = {
-                        scope.launch {
-                            busy = true
-                            message = ""
-                            try {
-                                api.baseUrl = server
-                                // Admin currently authenticates with its existing username; Worker uses email/mobile.
-                                try {
-                                    api.post("login", mapOf("username" to identifier.trim(), "password" to password))
-                                    api.rememberedRole = "admin"
-                                    onLoggedIn()
-                                } catch (adminError: ApiException) {
-                                    if (!adminError.authRequired) throw adminError
-                                    try {
-                                        api.post("worker_login", mapOf("identifier" to identifier.trim(), "password" to password))
-                                        api.rememberedRole = "worker"
-                                        onLoggedIn()
-                                    } catch (workerError: Exception) {
-                                        throw workerError
-                                    }
-                                }
-                            } catch (e: Exception) {
-                                isError = true
-                                message = e.message ?: "Sign in failed. Check your account details."
-                            }
-                            busy = false
+                Column(
+                    Modifier.fillMaxWidth().offset(y = (-22).dp)
+                        .shadow(18.dp, RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp))
+                        .clip(RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp))
+                        .background(Color.White)
+                        .padding(horizontal = 24.dp, vertical = 22.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("Sign In", color = Color(0xFF17234D), fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
+                    Spacer(Modifier.height(4.dp))
+                    Text("Enter your company account details to continue", color = Color(0xFF9298A8), fontSize = 11.sp, textAlign = TextAlign.Center)
+                    Spacer(Modifier.height(19.dp))
+                    LoginField(identifier, { identifier = it; message = "" }, "Email / username / mobile", keyboard = KeyboardType.Email)
+                    Spacer(Modifier.height(9.dp))
+                    LoginField(password, { password = it; message = "" }, "Password", password = !showPassword, trailing = {
+                        TextButton(onClick = { showPassword = !showPassword }, contentPadding = PaddingValues(horizontal = 5.dp, vertical = 0.dp)) {
+                            Text(if (showPassword) "Hide" else "Show", color = Color(0xFF6F7895), fontSize = 10.sp)
                         }
-                    },
-                    enabled = !busy && identifier.isNotBlank() && password.isNotBlank(),
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
-                    shape = CircleShape,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF202F66), disabledContainerColor = Color(0xFF8992B0))
-                ) { Text(if (busy) "Signing in…" else "Sign In", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
-
-                Spacer(Modifier.height(13.dp))
-                Text("OR CONTINUE WITH", color = Color(0xFF9AA0AF), fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
-                Spacer(Modifier.height(9.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                    SocialPlaceholder("G", "Google", Color(0xFF4285F4), Modifier.weight(1f))
-                    SocialPlaceholder("f", "Facebook", Color(0xFF1877F2), Modifier.weight(1f))
-                }
-                Spacer(Modifier.height(9.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Don't have an account?", color = Color(0xFF9AA0AF), fontSize = 10.sp)
-                    TextButton(onClick = { registering = true }, contentPadding = PaddingValues(start = 5.dp, end = 0.dp, top = 0.dp, bottom = 0.dp)) {
-                        Text("Sign Up", color = Color(0xFF202F66), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    })
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        TextButton(onClick = { isError = true; message = "Please contact your administrator to reset your password." }, contentPadding = PaddingValues(horizontal = 2.dp, vertical = 2.dp)) {
+                            Text("Forgot password?", color = Color(0xFF27345F), fontSize = 10.sp, fontWeight = FontWeight.Medium)
+                        }
                     }
+                    if (message.isNotBlank()) {
+                        Text(message, color = if (isError) Color(0xFFCA4655) else Color(0xFF2E9E6B), fontSize = 11.sp, modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp))
+                    }
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                busy = true
+                                message = ""
+                                try {
+                                    api.baseUrl = server
+                                    api.clearLocalSession()
+                                    val trimmed = identifier.trim()
+                                    val actions = if (trimmed.contains("@")) listOf("worker_login", "login") else listOf("login", "worker_login")
+                                    var authenticatedRole = ""
+                                    var lastAuthError: ApiException? = null
+                                    for (action in actions) {
+                                        try {
+                                            val fields = if (action == "login") mapOf("username" to trimmed, "password" to password)
+                                                else mapOf("identifier" to trimmed, "password" to password)
+                                            api.post(action, fields)
+                                            authenticatedRole = if (action == "login") "admin" else "worker"
+                                            break
+                                        } catch (e: ApiException) {
+                                            lastAuthError = e
+                                            val lower = e.message.orEmpty().lowercase()
+                                            val credentialFailure = e.authRequired || listOf(
+                                                "invalid", "incorrect", "wrong", "password", "username", "email",
+                                                "credential", "account", "login", "not found", "unauthor", "user"
+                                            ).any { lower.contains(it) }
+                                            if (!credentialFailure) throw e
+                                        }
+                                    }
+                                    if (authenticatedRole.isBlank()) throw lastAuthError ?: ApiException("Account not recognised.")
+                                    api.rememberedRole = authenticatedRole
+                                    onLoggedIn()
+                                } catch (e: Exception) {
+                                    isError = true
+                                    message = e.message ?: "Sign in failed. Check your account details."
+                                }
+                                busy = false
+                            }
+                        },
+                        enabled = !busy && identifier.isNotBlank() && password.isNotBlank(),
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                        shape = CircleShape,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF202F66), disabledContainerColor = Color(0xFF8992B0))
+                    ) { Text(if (busy) "Signing in…" else "Sign In", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+
+                    Spacer(Modifier.height(13.dp))
+                    Text("OR CONTINUE WITH", color = Color(0xFF9AA0AF), fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                    Spacer(Modifier.height(9.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                        SocialPlaceholder("G", "Google", Color(0xFF4285F4), Modifier.weight(1f))
+                        SocialPlaceholder("f", "Facebook", Color(0xFF1877F2), Modifier.weight(1f))
+                    }
+                    Spacer(Modifier.height(9.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Don't have an account?", color = Color(0xFF9AA0AF), fontSize = 10.sp)
+                        TextButton(onClick = { returnToLoginForm = true; registering = true }, contentPadding = PaddingValues(start = 5.dp, end = 0.dp, top = 0.dp, bottom = 0.dp)) {
+                            Text("Sign Up", color = Color(0xFF202F66), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    Text("Admin and Worker accounts use the same sign-in form.", color = Color(0xFFA5AAB6), fontSize = 9.sp, textAlign = TextAlign.Center)
+                    TextButton(onClick = { showServer = !showServer }, contentPadding = PaddingValues(0.dp)) {
+                        Text(if (showServer) "Hide server settings" else "Server settings", color = Color(0xFF8D94A6), fontSize = 9.sp)
+                    }
+                    if (showServer) LoginField(server, { server = it }, "Server address", keyboard = KeyboardType.Uri)
+                    Spacer(Modifier.height(10.dp))
                 }
-                Text("Worker: email/mobile  ·  Admin: existing username", color = Color(0xFFA5AAB6), fontSize = 9.sp, textAlign = TextAlign.Center)
-                TextButton(onClick = { showServer = !showServer }, contentPadding = PaddingValues(0.dp)) {
-                    Text(if (showServer) "Hide server settings" else "Server settings", color = Color(0xFF8D94A6), fontSize = 9.sp)
-                }
-                if (showServer) {
-                    LoginField(server, { server = it }, "Server address", keyboard = KeyboardType.Uri)
-                }
-                Spacer(Modifier.height(10.dp))
             }
         }
     }

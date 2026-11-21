@@ -133,24 +133,29 @@ fun SaymaCard(modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, cont
 
 @Composable
 fun ProfileAvatar(name: String, size: Int = 40, photoData: String? = LocalUserProfilePhoto.current) {
-    val bitmap: Bitmap? = remember(photoData) {
-        val raw = photoData.orEmpty()
-        if (raw.isBlank()) null else try {
-            val encoded = if (raw.contains("base64,")) raw.substringAfter("base64,") else raw
-            val bytes = Base64.decode(encoded, Base64.DEFAULT)
-            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-        } catch (_: Exception) { null }
+    val api = apiOf()
+    val raw = photoData.orEmpty().trim()
+    val looksBase64 = raw.startsWith("data:image", true) ||
+        (raw.length > 100 && Regex("^[A-Za-z0-9+/=\\r\\n]+$").matches(raw))
+    val remote = raw.isNotBlank() && !looksBase64
+    val (remoteState, _) = useLoad(if (remote) raw else "") {
+        if (remote) api.profilePhotoBytes(raw) else null
     }
-    if (bitmap != null) {
-        Image(
-            bitmap.asImageBitmap(),
-            contentDescription = "$name profile photo",
-            modifier = Modifier.size(size.dp).clip(CircleShape),
-            contentScale = ContentScale.Crop
-        )
+    val bytes = if (remote) {
+        (remoteState as? UiState.Ready<ByteArray?>)?.value
     } else {
-        Avatar(name, size)
+        try {
+            val encoded = if (raw.contains("base64,")) raw.substringAfter("base64,") else raw
+            if (encoded.isBlank()) null else Base64.decode(encoded, Base64.DEFAULT)
+        } catch (_: Exception) {
+            try { Base64.decode(raw, Base64.URL_SAFE) } catch (_: Exception) { null }
+        }
     }
+    val bitmap: Bitmap? = remember(raw, bytes) { bytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size) } }
+    if (bitmap != null) {
+        Image(bitmap.asImageBitmap(), contentDescription = "$name profile photo",
+            modifier = Modifier.size(size.dp).clip(CircleShape), contentScale = ContentScale.Crop)
+    } else Avatar(name, size)
 }
 
 @Composable

@@ -129,7 +129,16 @@ fun DocumentsScreen(onBack: () -> Unit) {
             SectionTitle("Browse by category")
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 allCats.forEach { c ->
-                    FilterChip(selected = filter == c, onClick = { filter = c }, label = { Text(c) })
+                    val accent = if (c == "ALL") Color(0xFF273A75) else documentAccent(c)
+                    FilterChip(
+                        selected = filter == c,
+                        onClick = { filter = c },
+                        label = { Text(c) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = accent, selectedLabelColor = Color.White,
+                            containerColor = accent.copy(alpha = .12f), labelColor = accent
+                        )
+                    )
                 }
             }
             val shown = docs.filter { filter == "ALL" || it.str("category").equals(filter, true) }

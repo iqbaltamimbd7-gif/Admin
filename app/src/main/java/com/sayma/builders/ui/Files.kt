@@ -13,6 +13,8 @@ import android.os.Environment
 import android.os.ParcelFileDescriptor
 import android.provider.MediaStore
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -21,6 +23,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -84,29 +89,45 @@ fun FileViewer(file: FileData, onClose: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snack = remember { SnackbarHostState() }
+    val backdrop = Brush.linearGradient(listOf(Color(0xFFE7F1F8), Color(0xFFF4EAF6), Color(0xFFE6F4F0)))
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Scaffold(
+            containerColor = Color.Transparent,
             snackbarHost = { SnackbarHost(snack) },
             topBar = {
-                Surface(color = Teal) {
+                Box(Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Color(0xFF202F66), Color(0xFF397DAF), Color(0xFF35A78B))))) {
                     Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(file.name, color = androidx.compose.ui.graphics.Color.White, modifier = Modifier.weight(1f), maxLines = 1, style = MaterialTheme.typography.titleMedium)
-                        TextButton(onClick = { scope.launch { snack.showSnackbar(shareFromApp(context, file)) } }) { Text("Share", color = androidx.compose.ui.graphics.Color.White) }
-                        TextButton(onClick = { scope.launch { snack.showSnackbar(saveToDownloads(context, file)) } }) { Text("Download", color = androidx.compose.ui.graphics.Color.White) }
-                        TextButton(onClick = onClose) { Text("Close", color = androidx.compose.ui.graphics.Color.White) }
+                        Text(file.name, color = Color.White, modifier = Modifier.weight(1f), maxLines = 1, style = MaterialTheme.typography.titleMedium)
+                        TextButton(onClick = { scope.launch { snack.showSnackbar(shareFromApp(context, file)) } }) { Text("Share", color = Color.White) }
+                        TextButton(onClick = { scope.launch { snack.showSnackbar(saveToDownloads(context, file)) } }) { Text("Download", color = Color.White) }
+                        TextButton(onClick = onClose) { Text("Close", color = Color.White) }
                     }
                 }
             }
         ) { pad ->
-            Box(Modifier.padding(pad).fillMaxSize()) {
+            Box(Modifier.padding(pad).fillMaxSize().background(backdrop)) {
                 when {
                     file.isPdf -> PdfPages(file.bytes)
                     file.isImage -> {
                         val bmp = remember(file) { BitmapFactory.decodeByteArray(file.bytes, 0, file.bytes.size) }
-                        if (bmp != null) Image(bmp.asImageBitmap(), file.name, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+                        if (bmp != null) Surface(
+                            modifier = Modifier.fillMaxSize().padding(14.dp),
+                            shape = RoundedCornerShape(22.dp), color = Color.White, shadowElevation = 12.dp
+                        ) { Image(bmp.asImageBitmap(), file.name, Modifier.fillMaxSize().padding(10.dp), contentScale = ContentScale.Fit) }
                         else Centered("ছবি দেখানো যায়নি। Download ব্যবহার করুন।")
                     }
-                    else -> Centered("এই ফাইলের ধরন অ্যাপে দেখানো যায় না। Download করে খুলুন।")
+                    else -> Surface(
+                        modifier = Modifier.align(Alignment.Center).padding(24.dp),
+                        shape = RoundedCornerShape(24.dp), color = Color.White, shadowElevation = 12.dp
+                    ) {
+                        Column(Modifier.padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("DOCUMENT PREVIEW", color = Color(0xFF397DAF), fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.4.sp)
+                            Spacer(Modifier.height(8.dp))
+                            Text(file.name, color = Color(0xFF202F66), fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(8.dp))
+                            Text("এই ফাইলের ধরন অ্যাপে সরাসরি দেখানো যায় না। Download করে খুলুন।", color = Muted)
+                        }
+                    }
                 }
             }
         }
@@ -134,7 +155,21 @@ private fun PdfPages(bytes: ByteArray) {
     val lock = remember(renderer) { Any() }
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val widthPx = with(androidx.compose.ui.platform.LocalDensity.current) { maxWidth.roundToPx() }.coerceAtMost(1600)
-        LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(8.dp)) {
+        LazyColumn(
+            Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFFE7F1F8), Color(0xFFF4EAF6), Color(0xFFE6F4F0)))),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 16.dp)
+        ) {
+            item {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("DOCUMENT PREVIEW", color = Color(0xFF397DAF), fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.3.sp)
+                        Text("${pageCount} ${if (pageCount == 1) "page" else "pages"}", color = Color(0xFF202F66), fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
+                    }
+                    Text("PDF", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold,
+                        modifier = Modifier.background(Brush.horizontalGradient(listOf(Color(0xFF397DAF), Color(0xFF35A78B))), RoundedCornerShape(50)).padding(horizontal = 12.dp, vertical = 7.dp))
+                }
+            }
             itemsIndexed(List(pageCount) { it }) { _, index ->
                 var bmp by remember(index) { mutableStateOf<Bitmap?>(null) }
                 LaunchedEffect(index) {
@@ -150,8 +185,18 @@ private fun PdfPages(bytes: ByteArray) {
                         }
                     }
                 }
-                bmp?.let { Image(it.asImageBitmap(), "Page ${index + 1}", Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth) }
-                    ?: Box(Modifier.fillMaxWidth().height(240.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                Column {
+                    if (bmp != null) {
+                        Surface(Modifier.fillMaxWidth().shadow(10.dp, RoundedCornerShape(16.dp)), shape = RoundedCornerShape(16.dp), color = Color.White) {
+                            Image(bmp!!.asImageBitmap(), "Page ${index + 1}", Modifier.fillMaxWidth().padding(8.dp), contentScale = ContentScale.FillWidth)
+                        }
+                    } else {
+                        Surface(Modifier.fillMaxWidth().height(240.dp), shape = RoundedCornerShape(16.dp), color = Color.White, shadowElevation = 8.dp) {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Color(0xFF397DAF)) }
+                        }
+                    }
+                    Text("PAGE ${index + 1}", color = Color(0xFF65758D), fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.End).padding(end = 6.dp, top = 3.dp))
+                }
             }
         }
     }

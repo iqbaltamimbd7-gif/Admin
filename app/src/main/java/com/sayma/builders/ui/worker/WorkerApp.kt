@@ -50,12 +50,14 @@ fun WorkerApp(name: String, onLogout: () -> Unit) {
     var headerPhoto by remember { mutableStateOf<String?>(null) }
     val (state, reload) = useLoad(Unit, onAuthLost = onLogout) { api.get("worker_dashboard") }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(state) {
+        val worker = (state as? UiState.Ready<JSONObject>)?.value?.optJSONObject("worker")
+        val fallback = worker?.let { it.str("photo_url").ifBlank { it.str("photo").ifBlank { it.str("profile_photo") } } }
         headerPhoto = try {
             val photo = api.file("worker_view_profile_photo", emptyMap(), "worker-profile.jpg")
             val mime = photo.mime.ifBlank { "image/jpeg" }
             "data:$mime;base64," + android.util.Base64.encodeToString(photo.bytes, android.util.Base64.NO_WRAP)
-        } catch (_: Exception) { null }
+        } catch (_: Exception) { fallback?.takeIf { it.isNotBlank() && it != "null" } }
     }
 
     BackHandler(enabled = screen != null || tab != WTab.Home) {
@@ -97,19 +99,8 @@ fun WorkerApp(name: String, onLogout: () -> Unit) {
 
 @Composable
 private fun ProfilePhoto(worker: JSONObject, size: Int = 64) {
-    val api = apiOf()
-    val url = worker.str("photo_url")
-    val (state, _) = useLoad(url) {
-        when {
-            url.isBlank() -> null
-            url.startsWith("data:image") -> android.util.Base64.decode(url.substringAfter("base64,"), android.util.Base64.DEFAULT)
-            url.contains("worker_view_profile_photo") -> api.file("worker_view_profile_photo", emptyMap(), "photo.jpg").bytes
-            else -> null
-        }
-    }
-    val bmp = (state as? UiState.Ready<ByteArray?>)?.value?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
-    if (bmp != null) Image(bmp.asImageBitmap(), "Profile", Modifier.size(size.dp).clip(CircleShape), contentScale = ContentScale.Crop)
-    else Avatar(worker.str("name"), size)
+    val photo = worker.str("photo_url").ifBlank { worker.str("photo").ifBlank { worker.str("profile_photo") } }
+    ProfileAvatar(worker.str("name"), size, photo)
 }
 
 @Composable

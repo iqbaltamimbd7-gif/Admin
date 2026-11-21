@@ -23,47 +23,49 @@ import com.sayma.builders.data.*
 import com.sayma.builders.ui.*
 import kotlinx.coroutines.launch
 
+private fun workerOptionKey(worker: WorkerRec, index: Int): String {
+    val identity = listOf(worker.raw.str("id"), worker.raw.str("worker_id"), worker.passport, worker.email, worker.mobile, worker.name)
+        .firstOrNull { it.isNotBlank() }.orEmpty()
+    return "$identity#$index"
+}
+
 @Composable
 fun WorkersScreen(data: AdminData, onOpen: (WorkerRec) -> Unit) {
     var q by remember { mutableStateOf("") }
     var expanded by remember { mutableStateOf(false) }
-    var selectedKey by remember(data.workers.map { it.key }) {
-        mutableStateOf(data.workers.firstOrNull()?.key.orEmpty())
+    val options = data.workers.mapIndexed { index, worker -> worker to workerOptionKey(worker, index) }
+    var selectedOptionKey by remember(options.map { it.second }) { mutableStateOf(options.firstOrNull()?.second.orEmpty()) }
+    val filtered = options.filter { (worker, _) ->
+        "${worker.name} ${worker.role} ${worker.passport} ${worker.site} ${worker.email} ${worker.mobile}".contains(q, true)
     }
-    val list = data.workers.filter {
-        "${it.name} ${it.role} ${it.passport} ${it.site} ${it.email} ${it.mobile}".contains(q, true)
-    }
-    val selected = list.firstOrNull { it.key == selectedKey } ?: list.firstOrNull()
+    val selected = options.firstOrNull { it.second == selectedOptionKey }?.first ?: options.firstOrNull()?.first
 
     ScreenScroll {
         ScreenHeader("Workers", "${data.workers.size} workforce profiles")
         SearchPill(q, { q = it }, "Search worker, role, passport or email…")
-        SectionTitle("Select a worker")
+        SectionTitle("Select a worker") { Text("Showing ${filtered.size} of ${data.workers.size}", color = Muted, fontSize = 10.sp) }
         Box(Modifier.fillMaxWidth()) {
             OutlinedButton(
                 onClick = { expanded = true },
-                modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 58.dp),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Column(Modifier.weight(1f), horizontalAlignment = androidx.compose.ui.Alignment.Start) {
                     Text(selected?.name ?: "Choose a worker", fontWeight = FontWeight.Bold, maxLines = 1)
-                    if (selected != null) Text(
-                        "${selected.role} · ${selected.passport.ifBlank { "No passport" }}",
-                        color = Muted, fontSize = 11.sp, maxLines = 1
-                    )
+                    if (selected != null) Text("${selected.role} · ${selected.passport.ifBlank { selected.email.ifBlank { "No ID" } }}", color = Muted, fontSize = 11.sp, maxLines = 1)
                 }
                 Text("▾", color = Teal, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             }
-            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                list.forEach { worker ->
+            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, modifier = Modifier.heightIn(max = 420.dp)) {
+                filtered.forEach { (worker, optionKey) ->
                     DropdownMenuItem(
                         text = {
                             Column {
-                                Text(worker.name, fontWeight = FontWeight.Bold)
-                                Text("${worker.role} · ${worker.passport.ifBlank { "No passport" }}", color = Muted, fontSize = 11.sp)
+                                Text(worker.name.ifBlank { "Unnamed worker" }, fontWeight = FontWeight.Bold)
+                                Text(listOf(worker.role, worker.passport, worker.email).filter { it.isNotBlank() }.joinToString(" · "), color = Muted, fontSize = 11.sp, maxLines = 1)
                             }
                         },
-                        onClick = { selectedKey = worker.key; expanded = false }
+                        onClick = { selectedOptionKey = optionKey; expanded = false }
                     )
                 }
             }
@@ -76,7 +78,7 @@ fun WorkersScreen(data: AdminData, onOpen: (WorkerRec) -> Unit) {
                     Avatar(worker.name, 46)
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(worker.name, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+                        Text(worker.name.ifBlank { "Unnamed worker" }, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
                         Text(worker.role, color = Muted, fontSize = 12.sp)
                     }
                     Chip("SELECTED", Teal)
@@ -91,20 +93,15 @@ fun WorkersScreen(data: AdminData, onOpen: (WorkerRec) -> Unit) {
             }
         }
 
-        SectionTitle("All workers (${list.size})")
+        SectionTitle("All workers (${filtered.size})")
         SaymaCard {
-            if (list.isEmpty()) EmptyState("No matching workers")
-            list.forEach { worker ->
+            if (filtered.isEmpty()) EmptyState("No matching workers", "Clear the search or refresh the worker data.")
+            else filtered.forEach { (worker, optionKey) ->
                 ListRow(
-                    worker.name,
-                    "${worker.role} · ${worker.passport.ifBlank { "No passport" }}",
-                    rm(worker.rate),
-                    "/day",
-                    worker.name
-                ) {
-                    selectedKey = worker.key
-                    onOpen(worker)
-                }
+                    worker.name.ifBlank { "Unnamed worker" },
+                    "${worker.role} · ${worker.passport.ifBlank { worker.email.ifBlank { "No ID" } }}",
+                    rm(worker.rate), "/day", worker.name
+                ) { selectedOptionKey = optionKey; onOpen(worker) }
             }
         }
     }

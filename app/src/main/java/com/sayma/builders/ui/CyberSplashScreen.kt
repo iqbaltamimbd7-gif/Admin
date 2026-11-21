@@ -57,12 +57,12 @@ fun CyberSplashScreen() {
                     Modifier.fillMaxWidth().widthIn(max = 440.dp)
                         .shadow(24.dp, monitorShape)
                         .clip(monitorShape)
-                        .background(Color(0xFF102A49))
+                        .background(Color(0xFF071626))
                         .border(1.dp, Color.White.copy(alpha = .45f), monitorShape)
                         .padding(7.dp)
                 ) {
                     Image(
-                        painterResource(R.drawable.cyber_dashboard_preview),
+                        painterResource(R.drawable.cyber_dashboard_full),
                         contentDescription = "Cyber Builders desktop portal preview",
                         modifier = Modifier.fillMaxWidth().aspectRatio(1891f / 905f)
                             .clip(RoundedCornerShape(15.dp)),
