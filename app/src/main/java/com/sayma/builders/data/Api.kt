@@ -171,9 +171,11 @@ class Api(context: Context) {
         withContext(Dispatchers.IO) {
             try {
                 val root = baseUrl.toHttpUrlOrNull() ?: throw ApiException("সার্ভার ঠিকানা সঠিক নয়।")
-                val url = root.newBuilder().addPathSegment("profile.php").addQueryParameter("action", "get").build()
-                client.newCall(Request.Builder().url(url).header("Accept", "application/json").build())
-                    .execute().use { parse(it.code, it.body?.string() ?: "") }
+                val url = root.newBuilder().addPathSegment("profile.php").build()
+                val body = FormBody.Builder().add("action", "get").build()
+                client.newCall(
+                    Request.Builder().url(url).header("Accept", "application/json").post(body).build()
+                ).execute().use { parse(it.code, it.body?.string() ?: "") }
             } catch (e: Exception) { throw network(e) }
         }
     suspend fun logout(role: String) {

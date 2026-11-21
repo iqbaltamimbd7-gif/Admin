@@ -134,8 +134,8 @@ fun SaymaCard(modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, cont
 @Composable
 fun ProfileAvatar(name: String, size: Int = 40, photoData: String? = LocalUserProfilePhoto.current) {
     val bitmap: Bitmap? = remember(photoData) {
-        try {
-            val raw = photoData?.takeIf { it.isNotBlank() } ?: return@remember null
+        val raw = photoData.orEmpty()
+        if (raw.isBlank()) null else try {
             val encoded = if (raw.contains("base64,")) raw.substringAfter("base64,") else raw
             val bytes = Base64.decode(encoded, Base64.DEFAULT)
             BitmapFactory.decodeByteArray(bytes, 0, bytes.size)

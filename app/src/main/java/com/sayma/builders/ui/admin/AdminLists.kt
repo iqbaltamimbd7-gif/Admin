@@ -7,7 +7,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -27,14 +26,86 @@ import kotlinx.coroutines.launch
 @Composable
 fun WorkersScreen(data: AdminData, onOpen: (WorkerRec) -> Unit) {
     var q by remember { mutableStateOf("") }
-    val list = data.workers.filter { "${it.name} ${it.role} ${it.passport} ${it.site}".contains(q, true) }
+    var expanded by remember { mutableStateOf(false) }
+    var selectedKey by remember(data.workers.map { it.key }) {
+        mutableStateOf(data.workers.firstOrNull()?.key.orEmpty())
+    }
+    val list = data.workers.filter {
+        "${it.name} ${it.role} ${it.passport} ${it.site} ${it.email} ${it.mobile}".contains(q, true)
+    }
+    val selected = list.firstOrNull { it.key == selectedKey } ?: list.firstOrNull()
+
     ScreenScroll {
         ScreenHeader("Workers", "${data.workers.size} workforce profiles")
-        SearchPill(q, { q = it }, "Search worker, role or passport…")
-        SectionTitle("Team directory")
+        SearchPill(q, { q = it }, "Search worker, role, passport or email…")
+        SectionTitle("Select a worker")
+        Box(Modifier.fillMaxWidth()) {
+            OutlinedButton(
+                onClick = { expanded = true },
+                modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(Modifier.weight(1f), horizontalAlignment = androidx.compose.ui.Alignment.Start) {
+                    Text(selected?.name ?: "Choose a worker", fontWeight = FontWeight.Bold, maxLines = 1)
+                    if (selected != null) Text(
+                        "${selected.role} · ${selected.passport.ifBlank { "No passport" }}",
+                        color = Muted, fontSize = 11.sp, maxLines = 1
+                    )
+                }
+                Text("▾", color = Teal, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            }
+            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                list.forEach { worker ->
+                    DropdownMenuItem(
+                        text = {
+                            Column {
+                                Text(worker.name, fontWeight = FontWeight.Bold)
+                                Text("${worker.role} · ${worker.passport.ifBlank { "No passport" }}", color = Muted, fontSize = 11.sp)
+                            }
+                        },
+                        onClick = { selectedKey = worker.key; expanded = false }
+                    )
+                }
+            }
+        }
+
+        selected?.let { worker ->
+            Spacer(Modifier.height(10.dp))
+            SaymaCard {
+                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Avatar(worker.name, 46)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(worker.name, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+                        Text(worker.role, color = Muted, fontSize = 12.sp)
+                    }
+                    Chip("SELECTED", Teal)
+                }
+                Spacer(Modifier.height(8.dp))
+                InfoLine("Passport / ID", worker.passport)
+                InfoLine("Assigned site", worker.site)
+                InfoLine("Email", worker.email)
+                InfoLine("Mobile", worker.mobile)
+                InfoLine("Daily rate", rm(worker.rate))
+                GradientButton("Open profile & edit", Modifier.fillMaxWidth()) { onOpen(worker) }
+            }
+        }
+
+        SectionTitle("All workers (${list.size})")
         SaymaCard {
             if (list.isEmpty()) EmptyState("No matching workers")
-            list.forEach { w -> ListRow(w.name, "${w.role} · ${w.passport.ifBlank { "No passport" }}", rm(w.rate), "/day", w.name) { onOpen(w) } }
+            list.forEach { worker ->
+                ListRow(
+                    worker.name,
+                    "${worker.role} · ${worker.passport.ifBlank { "No passport" }}",
+                    rm(worker.rate),
+                    "/day",
+                    worker.name
+                ) {
+                    selectedKey = worker.key
+                    onOpen(worker)
+                }
+            }
         }
     }
 }
