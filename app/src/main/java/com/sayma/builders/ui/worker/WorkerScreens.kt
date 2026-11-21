@@ -369,8 +369,13 @@ fun AttendanceScreen() {
         busy = false
     }
 
-    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) verifyThenCapture() else { ok = false; msg = "Clock-in এর জন্য লোকেশন অনুমতি দিতে হবে।" }
+    // Android 12+ requires coarse and fine location to be requested together.
+    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
+        if (grants[Manifest.permission.ACCESS_FINE_LOCATION] == true) verifyThenCapture()
+        else {
+            ok = false
+            msg = "Clock-in-এর জন্য Precise Location অনুমতি দিন। Approximate Location দিয়ে সাইট যাচাই করা যাবে না।"
+        }
     }
 
     host()
@@ -392,7 +397,7 @@ fun AttendanceScreen() {
                         if (gpsSearching) "GPS লোকেশন খোঁজা হচ্ছে…" else if (busy) "অপেক্ষা করুন…" else "Clock in (লোকেশন + ছবি)",
                         Modifier.fillMaxWidth(), enabled = !busy
                     ) {
-                        if (hasLocationPermission(context)) verifyThenCapture() else permission.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                        if (hasLocationPermission(context)) verifyThenCapture() else permission.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
                     }
                     "working" -> GradientButton(if (busy) "অপেক্ষা করুন…" else "Clock out", Modifier.fillMaxWidth(), enabled = !busy) {
                         scope.launch {
