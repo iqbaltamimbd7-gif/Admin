@@ -45,30 +45,16 @@ fun AdminApp(username: String, onLogout: () -> Unit) {
     BackHandler(enabled = screen != null) { screen = null }
 
     Scaffold(
-        containerColor = Bg,
+        containerColor = Color.Transparent,
         bottomBar = {
-            if (screen == null) Surface(
-                color = CardBg,
-                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-                shadowElevation = 14.dp
-            ) {
-                NavigationBar(containerColor = Color.Transparent, tonalElevation = 0.dp) {
-                    AdminTab.entries.forEach { t ->
-                        NavigationBarItem(
-                            selected = tab == t, onClick = { tab = t },
-                            icon = { Icon(t.icon, t.label) }, label = { Text(t.label) },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = Orchid, selectedTextColor = Orchid,
-                                unselectedIconColor = Muted, unselectedTextColor = Muted,
-                                indicatorColor = Color(0x22B77FBA)
-                            )
-                        )
-                    }
-                }
-            }
+            if (screen == null) SaymaBottomBar(
+                items = AdminTab.entries.map { SaymaNavItem(it.label, it.icon) },
+                selected = tab.label,
+                onSelect = { label -> tab = AdminTab.entries.first { it.label == label } }
+            )
         }
     ) { pad ->
-        Box(Modifier.padding(pad).fillMaxSize().statusBarsPadding()) {
+        Box(Modifier.padding(pad).fillMaxSize().background(ScreenBrush).statusBarsPadding()) {
             val s = screen
             when {
                 s is AdminScreen.Documents -> DocumentsScreen { screen = null }
