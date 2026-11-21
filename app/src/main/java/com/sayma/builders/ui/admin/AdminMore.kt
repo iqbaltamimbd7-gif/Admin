@@ -52,6 +52,9 @@ fun DocumentsScreen(onBack: () -> Unit) {
     host()
     ScreenScroll {
         BackBar("Documents", "Company documents", onBack)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            TextButton(onClick = reload.trigger) { Text("↻ Refresh documents", color = Orchid, fontWeight = FontWeight.Bold) }
+        }
         if (err.isNotBlank()) Text(err, color = Bad)
         Loaded(state, reload) { (docs, cats) ->
             val allCats = (listOf("ALL") + cats.ifEmpty { docs.map { it.str("category") }.distinct() }).distinct()

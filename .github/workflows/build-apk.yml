@@ -3,7 +3,7 @@ name: Build SAYMA Android APK
 on:
   workflow_dispatch:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, mobile-ui-gps-polish-20261122 ]
 
 jobs:
   build:
@@ -24,7 +24,15 @@ jobs:
           gradle-version: '8.7'
       - name: Build debug APK
         run: gradle :app:assembleDebug --stacktrace
+      - name: Package complete Android source
+        run: |
+          zip -r SAYMA-Android-Source.zip . \
+            -x ".git/*" ".gradle/*" "app/build/*" "SAYMA-Android-Source.zip"
       - uses: actions/upload-artifact@v4
         with:
           name: SAYMA-debug-apk
           path: app/build/outputs/apk/debug/*.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SAYMA-Android-Source
+          path: SAYMA-Android-Source.zip

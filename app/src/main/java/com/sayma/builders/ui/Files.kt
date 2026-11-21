@@ -1,7 +1,9 @@
 package com.sayma.builders.ui
 
+import android.content.ClipData
 import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color as AColor
@@ -24,6 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.core.content.FileProvider
 import com.sayma.builders.data.FileData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -55,6 +58,26 @@ fun saveToDownloads(context: Context, file: FileData): String {
     }
 }
 
+/** Shares a private server document through Android's native share sheet. */
+private fun shareFromApp(context: Context, file: FileData): String {
+    return try {
+        val safe = file.name.replace(Regex("""[\\/:*?"<>|]"""), "_").ifBlank { "SAYMA-document" }
+        val dir = File(context.cacheDir, "shared").apply { mkdirs() }
+        val cached = File(dir, safe).apply { writeBytes(file.bytes) }
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", cached)
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = file.mime.ifBlank { "application/octet-stream" }
+            putExtra(Intent.EXTRA_STREAM, uri)
+            clipData = ClipData.newUri(context.contentResolver, safe, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(send, "Share ${file.name}").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        "Share menu opened."
+    } catch (e: Exception) {
+        "Share করা যায়নি: ${e.message ?: "অজানা সমস্যা"}"
+    }
+}
+
 /** Native in-app viewer: PdfRenderer for PDFs, BitmapFactory for images. No WebView. */
 @Composable
 fun FileViewer(file: FileData, onClose: () -> Unit) {
@@ -68,6 +91,7 @@ fun FileViewer(file: FileData, onClose: () -> Unit) {
                 Surface(color = Teal) {
                     Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(file.name, color = androidx.compose.ui.graphics.Color.White, modifier = Modifier.weight(1f), maxLines = 1, style = MaterialTheme.typography.titleMedium)
+                        TextButton(onClick = { scope.launch { snack.showSnackbar(shareFromApp(context, file)) } }) { Text("Share", color = androidx.compose.ui.graphics.Color.White) }
                         TextButton(onClick = { scope.launch { snack.showSnackbar(saveToDownloads(context, file)) } }) { Text("Download", color = androidx.compose.ui.graphics.Color.White) }
                         TextButton(onClick = onClose) { Text("Close", color = androidx.compose.ui.graphics.Color.White) }
                     }

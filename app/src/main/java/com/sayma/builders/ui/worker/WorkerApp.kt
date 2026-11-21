@@ -45,12 +45,22 @@ fun WorkerApp(name: String, onLogout: () -> Unit) {
     Scaffold(
         containerColor = Bg,
         bottomBar = {
-            if (screen == null) NavigationBar(containerColor = CardBg) {
-                WTab.entries.forEach { t ->
-                    NavigationBarItem(
-                        selected = tab == t, onClick = { tab = t }, icon = { Icon(t.icon, t.label) }, label = { Text(t.label) },
-                        colors = NavigationBarItemDefaults.colors(selectedIconColor = Teal, selectedTextColor = Teal, indicatorColor = Color(0x2276C9C3))
-                    )
+            if (screen == null) Surface(
+                color = CardBg,
+                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                shadowElevation = 14.dp
+            ) {
+                NavigationBar(containerColor = Color.Transparent, tonalElevation = 0.dp) {
+                    WTab.entries.forEach { t ->
+                        NavigationBarItem(
+                            selected = tab == t, onClick = { tab = t }, icon = { Icon(t.icon, t.label) }, label = { Text(t.label) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = Orchid, selectedTextColor = Orchid,
+                                unselectedIconColor = Muted, unselectedTextColor = Muted,
+                                indicatorColor = Color(0x22B77FBA)
+                            )
+                        )
+                    }
                 }
             }
         }

@@ -3,8 +3,14 @@ package com.sayma.builders.ui
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -14,6 +20,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -51,9 +59,43 @@ fun <T> useLoad(key: Any? = Unit, onAuthLost: () -> Unit = {}, block: suspend ()
 fun apiOf(): Api = (androidx.compose.ui.platform.LocalContext.current.applicationContext as SaymaApp).api
 
 @Composable
+private fun LoadingPanel() {
+    val transition = rememberInfiniteTransition(label = "sayma-loading")
+    val pulse by transition.animateFloat(
+        initialValue = 0.34f,
+        targetValue = 0.82f,
+        animationSpec = infiniteRepeatable(animation = tween(950), repeatMode = RepeatMode.Reverse),
+        label = "sayma-loading-pulse"
+    )
+    Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 22.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Row(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
+                .background(Brush.linearGradient(listOf(Color(0xFFF4ECFA), Color(0xFFEAF7F5), Color(0xFFFFF0F4))))
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            CircularProgressIndicator(Modifier.size(22.dp), color = Orchid, strokeWidth = 2.5.dp)
+            Spacer(Modifier.width(12.dp))
+            Column {
+                Text("SAYMA", color = Ink, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp, letterSpacing = 1.sp)
+                Text("তথ্য প্রস্তুত হচ্ছে…", color = Muted, fontSize = 12.sp)
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        repeat(2) {
+            Box(
+                Modifier.fillMaxWidth().padding(horizontal = 2.dp).padding(bottom = 8.dp)
+                    .height(54.dp).clip(RoundedCornerShape(16.dp))
+                    .background(Color(0xFFEDE7F5).copy(alpha = pulse))
+            )
+        }
+    }
+}
+
+@Composable
 fun <T> Loaded(state: UiState<T>, reload: Reload, content: @Composable (T) -> Unit) {
     when (state) {
-        UiState.Loading -> Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Teal) }
+        UiState.Loading -> LoadingPanel()
         is UiState.Failed -> Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(state.message, color = Bad, style = MaterialTheme.typography.bodyMedium)
             Spacer(Modifier.height(10.dp))
@@ -65,8 +107,13 @@ fun <T> Loaded(state: UiState<T>, reload: Reload, content: @Composable (T) -> Un
 
 @Composable
 fun SaymaCard(modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, content: @Composable ColumnScope.() -> Unit) {
-    val m = modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(CardBg).let { if (onClick != null) it.clickable(onClick = onClick) else it }
-    Column(m.padding(14.dp), content = content)
+    val shape = RoundedCornerShape(20.dp)
+    val fill = Brush.linearGradient(listOf(Color.White, Color(0xFFFCF8FD), Color(0xFFF4FAFA)))
+    val edge = Brush.linearGradient(listOf(Mint.copy(alpha = .32f), Orchid.copy(alpha = .26f), Rose.copy(alpha = .24f)))
+    val m = modifier.fillMaxWidth().shadow(7.dp, shape).clip(shape).background(fill)
+        .border(BorderStroke(1.dp, edge), shape)
+        .let { if (onClick != null) it.clickable(onClick = onClick) else it }
+    Column(m.padding(15.dp), content = content)
 }
 
 @Composable
@@ -167,7 +214,13 @@ fun EmptyState(title: String, desc: String = "") {
 
 @Composable
 fun StatTile(label: String, value: String, modifier: Modifier = Modifier, color: Color = Teal) {
-    Column(modifier.clip(RoundedCornerShape(16.dp)).background(CardBg).padding(12.dp)) {
+    val shape = RoundedCornerShape(17.dp)
+    Column(
+        modifier.shadow(4.dp, shape).clip(shape)
+            .background(Brush.linearGradient(listOf(color.copy(alpha = .15f), Color.White, Color(0xFFF9F5FC))))
+            .border(BorderStroke(1.dp, color.copy(alpha = .16f)), shape)
+            .padding(12.dp)
+    ) {
         Text(value, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = color)
         Text(label, color = Muted, fontSize = 11.sp)
     }

@@ -9,6 +9,8 @@ import android.location.Location
 import android.location.LocationManager
 import android.net.Uri
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -33,6 +35,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -232,21 +235,80 @@ private fun hasLocationPermission(c: Context) =
 
 @Suppress("MissingPermission", "DEPRECATION")
 private suspend fun currentLocation(c: Context): Location? {
-    val lm = c.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-    val provider = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER).firstOrNull { runCatching { lm.isProviderEnabled(it) }.getOrDefault(false) } ?: return null
-    return suspendCancellableCoroutine { cont ->
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val signal = android.os.CancellationSignal()
-            cont.invokeOnCancellation { signal.cancel() }
-            lm.getCurrentLocation(provider, signal, c.mainExecutor) { cont.resume(it) }
-        } else {
-            lm.requestSingleUpdate(provider, object : android.location.LocationListener {
-                override fun onLocationChanged(location: Location) { if (cont.isActive) cont.resume(location) }
+    val manager = c.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+    // Do not rely on GPS alone: indoor GPS can be unavailable while network location still works.
+    val providers = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
+        .filter { runCatching { manager.isProviderEnabled(it) }.getOrDefault(false) }
+    if (providers.isEmpty()) {
+        throw ApiException("ফোনের Location/GPS বন্ধ আছে। Quick Settings থেকে Location চালু করে আবার চেষ্টা করুন।")
+    }
+
+    val now = System.currentTimeMillis()
+    var best: Location? = providers.mapNotNull { provider ->
+        runCatching { manager.getLastKnownLocation(provider) }.getOrNull()
+    }.filter { loc ->
+        val age = now - loc.time
+        age in 0..120_000L && loc.accuracy <= 120f
+    }.minByOrNull { loc -> loc.accuracy + ((now - loc.time) / 10_000f) }
+
+    if (best != null && best!!.accuracy <= 35f && now - best!!.time <= 30_000L) return best
+
+    val startedAt = System.currentTimeMillis()
+    val fresh = withTimeoutOrNull(28_000L) {
+        suspendCancellableCoroutine<Location?> { cont ->
+            val handler = Handler(Looper.getMainLooper())
+            lateinit var listener: android.location.LocationListener
+            lateinit var timeout: Runnable
+
+            fun finish(location: Location?) {
+                if (!cont.isActive) return
+                runCatching { manager.removeUpdates(listener) }
+                handler.removeCallbacks(timeout)
+                cont.resume(location)
+            }
+
+            timeout = Runnable {
+                val candidate = best?.takeIf {
+                    val age = System.currentTimeMillis() - it.time
+                    age in 0..120_000L && it.accuracy <= 120f
+                }
+                finish(candidate)
+            }
+
+            listener = object : android.location.LocationListener {
+                override fun onLocationChanged(location: Location) {
+                    val age = System.currentTimeMillis() - location.time
+                    if (age in 0..120_000L && (best == null || location.accuracy < best!!.accuracy)) best = location
+                    val candidate = best
+                    when {
+                        candidate == null -> Unit
+                        candidate.accuracy <= 35f -> finish(candidate)
+                        System.currentTimeMillis() - startedAt >= 10_000L && candidate.accuracy <= 85f -> finish(candidate)
+                    }
+                }
                 override fun onStatusChanged(provider: String?, status: Int, extras: android.os.Bundle?) {}
                 override fun onProviderEnabled(provider: String) {}
-                override fun onProviderDisabled(provider: String) { if (cont.isActive) cont.resume(null) }
-            }, android.os.Looper.getMainLooper())
+                override fun onProviderDisabled(provider: String) {}
+            }
+
+            var registered = false
+            providers.forEach { provider ->
+                try {
+                    manager.requestLocationUpdates(provider, 1_000L, 0f, listener, Looper.getMainLooper())
+                    registered = true
+                } catch (_: Exception) {}
+            }
+            if (!registered) finish(best) else handler.postDelayed(timeout, 26_000L)
+            cont.invokeOnCancellation {
+                handler.removeCallbacks(timeout)
+                runCatching { manager.removeUpdates(listener) }
+            }
         }
+    }
+
+    return fresh ?: best?.takeIf {
+        val age = System.currentTimeMillis() - it.time
+        age in 0..120_000L && it.accuracy <= 120f
     }
 }
 
@@ -266,6 +328,7 @@ fun AttendanceScreen() {
     var msg by remember { mutableStateOf("") }
     var ok by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
+    var gpsSearching by remember { mutableStateOf(false) }
     var verified by remember { mutableStateOf<Location?>(null) }
     val (opener, host) = rememberFileOpener { msg = it; ok = false }
     val (state, reload) = useLoad("attendance") { api.get("worker_attendance") }
@@ -289,14 +352,20 @@ fun AttendanceScreen() {
     }
 
     fun verifyThenCapture() = scope.launch {
-        busy = true; msg = ""
+        busy = true; gpsSearching = true; msg = "GPS লোকেশন খোঁজা হচ্ছে… ফোনের Location চালু রাখুন।"
         try {
-            val loc = currentLocation(context) ?: throw ApiException("লোকেশন পাওয়া যায়নি। GPS চালু করে খোলা জায়গায় আবার চেষ্টা করুন।")
+            val loc = currentLocation(context)
+                ?: throw ApiException("লোকেশন পাওয়া যায়নি। প্রায় ২৫ সেকেন্ড চেষ্টা করা হয়েছে। Precise Location চালু রেখে খোলা জায়গায় আবার চেষ্টা করুন।")
+            gpsSearching = false
+            msg = "লোকেশন পাওয়া গেছে (${loc.accuracy.toInt()} মিটার accuracy)। সাইট যাচাই হচ্ছে…"
             val r = api.post("worker_attendance_check_location", mapOf("latitude" to loc.latitude.toString(), "longitude" to loc.longitude.toString(), "accuracy_m" to loc.accuracy.toString()))
             verified = loc; ok = true; msg = r.optString("message", "Location verified.")
             val uri: Uri = FileProvider.getUriForFile(context, "${context.packageName}.files", photoFile)
             camera.launch(uri)
-        } catch (e: Exception) { fail(e) }
+        } catch (e: Exception) {
+            gpsSearching = false
+            fail(e)
+        }
         busy = false
     }
 
@@ -316,10 +385,13 @@ fun AttendanceScreen() {
                 Spacer(Modifier.height(6.dp))
                 Chip(when (status) { "working" -> "Working"; "completed" -> "Completed"; else -> "Not started" }, statusColor(status))
                 today?.let { Text("In ${it.str("clock_in_at")}  ·  Out ${it.str("clock_out_at").ifBlank { "—" }}", fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp)) }
-                if (msg.isNotBlank()) Text(msg, color = if (ok) Good else Bad, modifier = Modifier.padding(top = 8.dp), fontSize = 13.sp)
+                if (msg.isNotBlank()) Text(msg, color = if (ok) Good else if (gpsSearching) Teal else Bad, modifier = Modifier.padding(top = 8.dp), fontSize = 13.sp)
                 Spacer(Modifier.height(10.dp))
                 when (status) {
-                    "not_started" -> GradientButton(if (busy) "অপেক্ষা করুন…" else "Clock in (লোকেশন + ছবি)", Modifier.fillMaxWidth(), enabled = !busy) {
+                    "not_started" -> GradientButton(
+                        if (gpsSearching) "GPS লোকেশন খোঁজা হচ্ছে…" else if (busy) "অপেক্ষা করুন…" else "Clock in (লোকেশন + ছবি)",
+                        Modifier.fillMaxWidth(), enabled = !busy
+                    ) {
                         if (hasLocationPermission(context)) verifyThenCapture() else permission.launch(Manifest.permission.ACCESS_FINE_LOCATION)
                     }
                     "working" -> GradientButton(if (busy) "অপেক্ষা করুন…" else "Clock out", Modifier.fillMaxWidth(), enabled = !busy) {
