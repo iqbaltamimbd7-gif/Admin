@@ -248,7 +248,7 @@ private suspend fun currentLocation(c: Context): Location? {
         runCatching { manager.getLastKnownLocation(provider) }.getOrNull()
     }.filter { loc ->
         val age = now - loc.time
-        age in 0..120_000L && loc.accuracy <= 120f
+        age in 0..120_000L && loc.accuracy <= 100f
     }.minByOrNull { loc -> loc.accuracy + ((now - loc.time) / 10_000f) }
 
     if (best != null && best!!.accuracy <= 35f && now - best!!.time <= 30_000L) return best
@@ -270,7 +270,7 @@ private suspend fun currentLocation(c: Context): Location? {
             timeout = Runnable {
                 val candidate = best?.takeIf {
                     val age = System.currentTimeMillis() - it.time
-                    age in 0..120_000L && it.accuracy <= 120f
+                    age in 0..120_000L && it.accuracy <= 100f
                 }
                 finish(candidate)
             }
@@ -308,7 +308,7 @@ private suspend fun currentLocation(c: Context): Location? {
 
     return fresh ?: best?.takeIf {
         val age = System.currentTimeMillis() - it.time
-        age in 0..120_000L && it.accuracy <= 120f
+        age in 0..120_000L && it.accuracy <= 100f
     }
 }
 
