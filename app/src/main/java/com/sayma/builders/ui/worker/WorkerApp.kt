@@ -43,29 +43,16 @@ fun WorkerApp(name: String, onLogout: () -> Unit) {
     BackHandler(enabled = screen != null) { screen = null }
 
     Scaffold(
-        containerColor = Bg,
+        containerColor = Color.Transparent,
         bottomBar = {
-            if (screen == null) Surface(
-                color = CardBg,
-                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-                shadowElevation = 14.dp
-            ) {
-                NavigationBar(containerColor = Color.Transparent, tonalElevation = 0.dp) {
-                    WTab.entries.forEach { t ->
-                        NavigationBarItem(
-                            selected = tab == t, onClick = { tab = t }, icon = { Icon(t.icon, t.label) }, label = { Text(t.label) },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = Orchid, selectedTextColor = Orchid,
-                                unselectedIconColor = Muted, unselectedTextColor = Muted,
-                                indicatorColor = Color(0x22B77FBA)
-                            )
-                        )
-                    }
-                }
-            }
+            if (screen == null) SaymaBottomBar(
+                items = WTab.entries.map { SaymaNavItem(it.label, it.icon) },
+                selected = tab.label,
+                onSelect = { label -> tab = WTab.entries.first { it.label == label } }
+            )
         }
     ) { pad ->
-        Box(Modifier.padding(pad).fillMaxSize().statusBarsPadding()) {
+        Box(Modifier.padding(pad).fillMaxSize().background(ScreenBrush).statusBarsPadding()) {
             when (screen) {
                 WScreen.Payments -> Loaded(state, reload) { PaymentsScreen(it, reload) { screen = null } }
                 WScreen.Leave -> LeaveScreen { screen = null }
