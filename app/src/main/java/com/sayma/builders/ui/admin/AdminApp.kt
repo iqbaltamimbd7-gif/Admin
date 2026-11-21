@@ -36,7 +36,9 @@ private enum class AdminTab(val label: String, val icon: ImageVector) {
 }
 
 @Composable
-fun AdminApp(username: String, onLogout: () -> Unit) {
+fun AdminApp(username: String, displayName: String, onLogout: () -> Unit) {
+    val shownName = displayName.ifBlank { username }
+    CompositionLocalProvider(LocalUserDisplayName provides shownName) {
     val api = apiOf()
     var tab by remember { mutableStateOf(AdminTab.Home) }
     var screen by remember { mutableStateOf<AdminScreen?>(null) }
@@ -70,16 +72,17 @@ fun AdminApp(username: String, onLogout: () -> Unit) {
                         s is AdminScreen.ProjectDetail -> ProjectDetailScreen(data, s.project, onRefresh = { screen = null; reload.trigger() }) { screen = null }
                         s is AdminScreen.Reminders -> RemindersScreen(data) { screen = null }
                         else -> when (tab) {
-                            AdminTab.Home -> HomeScreen(data, username, y, { year = it }, { screen = it })
+                            AdminTab.Home -> HomeScreen(data, shownName, y, { year = it }, { screen = it })
                             AdminTab.Workers -> WorkersScreen(data) { screen = AdminScreen.WorkerDetail(it) }
                             AdminTab.Sites -> SitesScreen(data) { screen = AdminScreen.ProjectDetail(it) }
                             AdminTab.Finance -> FinanceScreen(data, y) { year = it }
-                            AdminTab.More -> MoreScreen(username, { screen = it }, onLogout, reload)
+                            AdminTab.More -> MoreScreen(shownName, { screen = it }, onLogout, reload)
                         }
                     }
                 }
             }
         }
+    }
     }
 }
 

@@ -39,14 +39,14 @@ internal fun expiries(data: AdminData, withinDays: Long): List<Expiry> {
 }
 
 @Composable
-fun HomeScreen(data: AdminData, username: String, year: String, onYear: (String) -> Unit, open: (AdminScreen) -> Unit) {
+fun HomeScreen(data: AdminData, displayName: String, year: String, onYear: (String) -> Unit, open: (AdminScreen) -> Unit) {
     val (due, paid, remaining) = data.totals(year)
     val activeSites = data.projects.count { it.status.contains("active", true) }
     val soon = expiries(data, 60)
     val trades = data.workers.groupBy { it.role }.map { it.key to it.value.size }.sortedByDescending { it.second }
 
     ScreenScroll {
-        ScreenHeader("Hi, ${username.substringBefore(' ')}.", "Your SAYMA workspace", profileName = username)
+        ScreenHeader("Hi, ${displayName.substringBefore(' ')}.", "Your SAYMA workspace", profileName = displayName)
 
         SearchPill("", {}, "Search workers, passport, project…")
         Spacer(Modifier.height(14.dp))

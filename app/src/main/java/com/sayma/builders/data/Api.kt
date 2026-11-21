@@ -166,6 +166,16 @@ class Api(context: Context) {
             } catch (e: Exception) { throw network(e) }
         }
 
+    /** Loads the authenticated Admin display profile from the existing profile.php endpoint. */
+    suspend fun adminProfile(): JSONObject =
+        withContext(Dispatchers.IO) {
+            try {
+                val root = baseUrl.toHttpUrlOrNull() ?: throw ApiException("সার্ভার ঠিকানা সঠিক নয়।")
+                val url = root.newBuilder().addPathSegment("profile.php").addQueryParameter("action", "get").build()
+                client.newCall(Request.Builder().url(url).header("Accept", "application/json").build())
+                    .execute().use { parse(it.code, it.body?.string() ?: "") }
+            } catch (e: Exception) { throw network(e) }
+        }
     suspend fun logout(role: String) {
         try { post(if (role == "worker") "worker_logout" else "logout") } catch (_: Exception) {}
         jar.clear()

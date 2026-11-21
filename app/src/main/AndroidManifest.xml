@@ -15,7 +15,7 @@
         android:name=".SaymaApp"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
-        android:label="SAYMA"
+        android:label="Cyber Builders Portal"
         android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
         android:theme="@style/Theme.Sayma">

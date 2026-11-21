@@ -41,6 +41,8 @@ import com.sayma.builders.data.FileData
 import com.sayma.builders.data.FilePart
 import kotlinx.coroutines.launch
 
+val LocalUserDisplayName = compositionLocalOf { "Admin" }
+
 sealed interface UiState<out T> {
     data object Loading : UiState<Nothing>
     data class Failed(val message: String, val authRequired: Boolean = false) : UiState<Nothing>
@@ -124,7 +126,7 @@ fun SaymaCard(modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, cont
 }
 
 @Composable
-fun BrandHeader(profileName: String = "Admin") {
+fun BrandHeader(profileName: String = LocalUserDisplayName.current) {
     val displayName = profileName.substringBefore("@").take(15).ifBlank { "Admin" }
     val shape = RoundedCornerShape(24.dp)
     Row(
@@ -217,27 +219,26 @@ data class SaymaNavItem(val label: String, val icon: ImageVector)
 
 @Composable
 fun SaymaBottomBar(items: List<SaymaNavItem>, selected: String, onSelect: (String) -> Unit) {
-    val shape = RoundedCornerShape(28.dp)
+    val shape = RoundedCornerShape(24.dp)
     Surface(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-        color = Color.White.copy(alpha = .88f),
-        shape = shape,
-        border = BorderStroke(1.dp, Color.White.copy(alpha = .95f)),
-        shadowElevation = 13.dp
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 7.dp),
+        color = Color.White.copy(alpha = .96f), shape = shape,
+        border = BorderStroke(1.dp, Color.White), shadowElevation = 12.dp
     ) {
-        Row(Modifier.fillMaxWidth().padding(6.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 5.dp, vertical = 5.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
             items.forEach { item ->
                 val active = item.label == selected
                 Column(
-                    Modifier.weight(1f).clip(RoundedCornerShape(18.dp))
-                        .then(if (active) Modifier.background(HeroBrush) else Modifier.background(Color.Transparent))
-                        .clickable { onSelect(item.label) }
-                        .padding(vertical = 7.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
+                    Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).clickable { onSelect(item.label) }.padding(vertical = 2.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center
                 ) {
-                    Icon(item.icon, contentDescription = item.label, tint = if (active) Color.White else Muted, modifier = Modifier.size(21.dp))
-                    Text(item.label, color = if (active) Color.White else Muted, fontSize = 9.sp, fontWeight = if (active) FontWeight.Bold else FontWeight.Medium, maxLines = 1)
+                    Box(
+                        Modifier.size(38.dp).clip(RoundedCornerShape(13.dp)).background(if (active) Color(0xFFE9DDF8) else Color.Transparent),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(item.icon, contentDescription = item.label, tint = if (active) Color(0xFF9A45B8) else Color(0xFF8D91A0), modifier = Modifier.size(21.dp))
+                    }
+                    Text(item.label, color = if (active) Color(0xFF9A45B8) else Color(0xFF858A99), fontSize = 9.sp, fontWeight = if (active) FontWeight.ExtraBold else FontWeight.SemiBold, maxLines = 1)
                 }
             }
         }

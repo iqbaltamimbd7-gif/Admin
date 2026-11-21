@@ -20,7 +20,7 @@ import com.sayma.builders.ui.*
 import kotlinx.coroutines.launch
 
 @Composable
-fun MoreScreen(username: String, open: (AdminScreen) -> Unit, onLogout: () -> Unit, reload: Reload) {
+fun MoreScreen(displayName: String, open: (AdminScreen) -> Unit, onLogout: () -> Unit, reload: Reload) {
     val items = listOf(
         Triple("Documents", "Company documents, versions & expiry", AdminScreen.Documents as AdminScreen),
         Triple("Attendance", "Verified GPS entry/exit and leave requests", AdminScreen.Attendance),
@@ -30,7 +30,7 @@ fun MoreScreen(username: String, open: (AdminScreen) -> Unit, onLogout: () -> Un
         Triple("Expiry reminders", "Permit and CIDB due dates", AdminScreen.Reminders)
     )
     ScreenScroll {
-        ScreenHeader("Workspace", "All company tools and records", profileName = username)
+        ScreenHeader("Workspace", "All company tools and records", profileName = displayName)
         SectionTitle("Management modules")
         SaymaCard { items.forEach { (t, d, s) -> ListRow(t, d, "›", "", avatar = t.take(1), onClick = { open(s) }) } }
         Spacer(Modifier.height(12.dp))
