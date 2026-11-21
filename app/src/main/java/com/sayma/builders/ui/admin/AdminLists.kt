@@ -24,7 +24,7 @@ fun WorkersScreen(data: AdminData, onOpen: (WorkerRec) -> Unit) {
     val list = data.workers.filter { "${it.name} ${it.role} ${it.passport} ${it.site}".contains(q, true) }
     ScreenScroll {
         ScreenHeader("Workers", "${data.workers.size} workforce profiles")
-        LabeledField(q, { q = it }, "Search worker, role or passport…")
+        SearchPill(q, { q = it }, "Search worker, role or passport…")
         SectionTitle("Team directory")
         SaymaCard {
             if (list.isEmpty()) EmptyState("No matching workers")
@@ -316,14 +316,13 @@ fun FinanceScreen(data: AdminData, year: String, onYear: (String) -> Unit) {
     ScreenScroll {
         ScreenHeader("Finance", "Permit payments & payroll overview")
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { data.years.forEach { y -> FilterChip(selected = y == year, onClick = { onYear(y) }, label = { Text(y) }) } }
-        Spacer(Modifier.height(8.dp))
-        Column(Modifier.fillMaxWidth().then(Modifier).padding(0.dp)) {
-            SaymaCard {
-                Text("PERMIT BUDGET · $year", color = Teal, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                Text(rm(due), fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
-                Text("${rm(paid)} paid · ${rm(remaining)} outstanding", color = Muted)
-                ProgressBar(if (due > 0) (paid / due).toFloat() else 0f, Modifier.padding(top = 8.dp))
-            }
+        Spacer(Modifier.height(10.dp))
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp)).background(Brush.linearGradient(listOf(Color(0xFF173454), Color(0xFF24639A), Color(0xFF5A8FB3)))).padding(20.dp)) {
+            Text("PERMIT BUDGET · $year", color = Color.White.copy(alpha = .78f), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            Spacer(Modifier.height(10.dp))
+            Text(rm(due), color = Color.White, fontSize = 31.sp, fontWeight = FontWeight.ExtraBold)
+            Text("${rm(paid)} paid · ${rm(remaining)} outstanding", color = Color.White.copy(alpha = .86f), fontSize = 12.sp)
+            ProgressBar(if (due > 0) (paid / due).toFloat() else 0f, Modifier.padding(top = 14.dp))
         }
         SectionTitle("Permit ledger")
         SaymaCard {
