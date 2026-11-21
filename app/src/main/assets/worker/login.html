@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#f3e9e8" name="theme-color"/><meta content="SAYMA BUILDERS Worker Portal" name="description"/><link href="../manifest.webmanifest" rel="manifest"/><link href="./assets/icon-192.png" rel="icon"/><link href="./assets/icon-192.png" rel="apple-touch-icon"/><link href="./css/worker.css?v=home-spacing-compact-v3" rel="stylesheet"/><title>SAYMA BUILDERS · Worker Login</title></head>
+<body><main class="shell worker-auth-shell"><section class="view active" id="workerLoginView">
+<div class="card">
+<div class="login-brand"><img alt="SAYMA BUILDERS" src="./assets/sayma-logo.png"/><p>Worker Portal · Secure sign in</p></div>
+<div class="card-head" style="margin-top:4px"><div><div class="eyebrow">WORKER ACCESS</div><h2>Welcome back</h2><div class="muted small">Use your registered email or mobile number.</div></div><span class="pill">Worker account</span></div>
+<div class="step"><span class="on" id="loginStep1"></span><span id="loginStep2"></span></div>
+<div class="message" id="workerLoginMsg"></div>
+<form id="workerIdentifierForm">
+<div class="field"><label for="workerIdentifier">Email address or mobile number</label><input autocomplete="username" class="input" id="workerIdentifier" placeholder="name@email.com or +60..." required=""/></div>
+<button class="btn primary block">Continue</button>
+</form>
+<form class="hidden" id="workerPasswordForm">
+<div class="field"><label>Sign in as</label><div class="input" id="identifierPreview" style="display:flex;align-items:center;min-height:52px"></div></div>
+<div class="field"><label for="workerPassword">Password</label><input autocomplete="current-password" class="input" id="workerPassword" placeholder="Enter your password" required="" type="password"/></div>
+<p class="small muted">First-time access for a worker already added by Admin: enter your passport number once. You will then create your own private password.</p>
+<button class="btn primary block" id="workerLoginBtn">Sign In</button>
+<button class="link" id="changeIdentifier" type="button">← Change email/mobile</button>
+</form>
+<div class="section" style="padding:13px;margin-top:18px"><div class="small muted">New to the Worker Portal?</div><button class="link" id="openRegister">Create a worker account →</button></div>
+</div>
+</section><section class="view" id="workerRegisterView">
+<div class="card">
+<div class="card-head"><div><div class="eyebrow">WORKER REGISTRATION</div><h2>Create account</h2><div class="muted small">Your details will be checked by the administrator before access is activated.</div></div><span class="pill gold">New account</span></div>
+<div class="message" id="registerMsg"></div>
+<form id="workerRegisterForm">
+<div class="field"><label for="regName">Full name (as recorded by Admin)</label><input autocomplete="name" class="input" id="regName" maxlength="255" required=""/></div>
+<div class="field"><label for="regPassport">Passport / Worker ID</label><input autocomplete="off" class="input" id="regPassport" maxlength="120" required=""/></div>
+<div class="field"><label for="regEmail">Email address</label><input autocomplete="email" class="input" id="regEmail" maxlength="190" required="" type="email"/></div>
+<div class="field"><label for="regMobile">Mobile number (include country code)</label><input autocomplete="tel" class="input" id="regMobile" placeholder="+60 12 345 6789" required="" type="tel"/></div>
+<div class="field"><label for="regPassword">Create password (minimum 10 characters)</label><input autocomplete="new-password" class="input" id="regPassword" minlength="10" required="" type="password"/></div>
+<div class="field"><label for="regPassword2">Confirm password</label><input autocomplete="new-password" class="input" id="regPassword2" minlength="10" required="" type="password"/></div>
+<button class="btn primary block" id="registerBtn">Submit registration</button>
+</form>
+<p class="small muted" style="margin-top:13px">Passport number is used only to match your worker record. It is never stored as your password.</p>
+<button class="link" id="backToWorkerLogin">← Back to Worker Login</button>
+</div>
+</section><section class="view" id="workerSetPasswordView">
+<div class="card">
+<div class="login-brand"><img alt="SAYMA BUILDERS" src="./assets/sayma-logo.png"/><p>One-time account security setup</p></div>
+<div class="card-head"><div><div class="eyebrow">FIRST-TIME ACCESS</div><h2>Create your password</h2><div class="muted small">Your worker record has been matched. Create a private password to continue.</div></div><span class="pill gold">Secure setup</span></div>
+<div class="message" id="setPasswordMsg"></div>
+<form id="workerSetPasswordForm">
+<div class="field"><label for="newWorkerPassword">New password (minimum 10 characters)</label><input autocomplete="new-password" class="input" id="newWorkerPassword" minlength="10" required="" type="password"/></div>
+<div class="field"><label for="newWorkerPassword2">Confirm new password</label><input autocomplete="new-password" class="input" id="newWorkerPassword2" minlength="10" required="" type="password"/></div>
+<button class="btn primary block" id="setPasswordBtn">Save password &amp; continue</button>
+</form>
+<button class="link" id="logoutFromPasswordSetup">Sign out</button>
+</div>
+</section><div class="footer">© 2026 SAYMA BUILDERS SDN BHD · Worker Portal</div></main><script defer="" src="./js/offline-cache.js"></script><script defer="" src="./js/auth.js"></script></body></html>

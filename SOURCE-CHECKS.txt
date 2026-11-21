@@ -1,0 +1,22 @@
+SAYMA BUILDERS UNIFIED APP — SOURCE CHECKS
+==========================================
+
+Static checks performed in the delivery workspace:
+- Latest uploaded portal source and the supplied Project Finance patch were merged.
+- PHP syntax: api.php passed php -l.
+- JavaScript syntax: mobile/app.js, worker/js/worker.js, worker/js/auth.js and worker/js/offline-cache.js passed node --check.
+- Mobile Admin and Worker portal assets were copied into one Android app's offline asset bundle.
+- Android manifest declares Internet, fine/coarse location, camera, audio, notifications and legacy storage permissions.
+- Android source contains runtime geolocation/camera permission handlers.
+- Android source contains authenticated DownloadManager handling and a PdfRenderer activity.
+- Android WebMessageListener is restricted to https://saymabuilders.com and messages from the main frame.
+- API document responses include inline/attachment disposition, private no-store headers and byte-range support.
+- ZIP integrity is checked before delivery.
+
+Not performed in this environment:
+- Android Gradle compilation (Android SDK/Gradle are not installed in this workspace).
+- Live cPanel/PHP/MySQL testing.
+- Real-device GPS, camera, file picker, PDF rendering and download testing.
+- Third-party iframe compatibility testing for each configured website.
+
+Build the debug APK with the included GitHub Actions workflow, then complete the phone test checklist in README-UNIFIED-APP-BANGLA.txt before using it in production.

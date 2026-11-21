@@ -1,9 +1,0 @@
-SAYMA BUILDERS ADMIN ANDROID APP URLS
-=====================================
-Admin Login:  https://saymabuilders.com/portal/login.html?next=mobile
-Mobile Admin: https://saymabuilders.com/portal/mobile/
-Shared API:   https://saymabuilders.com/portal/api.php
-Portal base:  https://saymabuilders.com/portal/
-
-The app keeps the existing offline-first implementation. Only URL and production
-same-origin API path settings were updated.

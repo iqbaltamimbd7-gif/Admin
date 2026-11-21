@@ -1,9 +1,0 @@
-ADMIN APP
-Login: https://saymabuilders.com/portal/login.html?next=mobile
-App:   https://saymabuilders.com/portal/mobile/
-API:   https://saymabuilders.com/portal/api.php
-
-WORKER APP
-Login: https://saymabuilders.com/portal/worker/login.html
-App:   https://saymabuilders.com/portal/worker/index.html
-API:   https://saymabuilders.com/portal/api.php
