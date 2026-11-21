@@ -29,6 +29,7 @@ fun LoginScreen(onLoggedIn: () -> Unit) {
     val api = apiOf()
     val scope = rememberCoroutineScope()
     var portal by remember { mutableStateOf(LoginPortal.Choose) }
+    var workerStep by remember { mutableStateOf(false) }
     var user by remember { mutableStateOf("") }
     var pass by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
@@ -70,7 +71,7 @@ fun LoginScreen(onLoggedIn: () -> Unit) {
                 Text("Secure access for company administrators and registered construction workers.",
                     color = Muted, fontSize = 13.sp, lineHeight = 19.sp, textAlign = TextAlign.Center)
                 Spacer(Modifier.height(24.dp))
-                SaymaCard(Modifier.fillMaxWidth(), onClick = { portal = LoginPortal.Admin; msg = "" }) {
+                SaymaCard(Modifier.fillMaxWidth(), onClick = { portal = LoginPortal.Admin; workerStep = false; user = ""; pass = ""; msg = "" }) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(54.dp).clip(RoundedCornerShape(17.dp)).background(Brush.linearGradient(listOf(Color(0xFFFFE9C9), Color(0xFFF8D8E8)))), contentAlignment = Alignment.Center) {
                             Text("▣", color = Color(0xFF9D5B87), fontSize = 27.sp, fontWeight = FontWeight.Bold)
@@ -85,7 +86,7 @@ fun LoginScreen(onLoggedIn: () -> Unit) {
                     }
                 }
                 Spacer(Modifier.height(14.dp))
-                SaymaCard(Modifier.fillMaxWidth(), onClick = { portal = LoginPortal.Worker; msg = "" }) {
+                SaymaCard(Modifier.fillMaxWidth(), onClick = { portal = LoginPortal.Worker; workerStep = false; user = ""; pass = ""; msg = "" }) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(54.dp).clip(RoundedCornerShape(17.dp)).background(Brush.linearGradient(listOf(Color(0xFFDDF4EA), Color(0xFFDCEBFF)))), contentAlignment = Alignment.Center) {
                             Text("⚒", color = Teal, fontSize = 27.sp, fontWeight = FontWeight.Bold)
@@ -101,7 +102,7 @@ fun LoginScreen(onLoggedIn: () -> Unit) {
                 }
             } else {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    TextButton(onClick = { portal = LoginPortal.Choose; msg = ""; pass = "" }) {
+                    TextButton(onClick = { portal = LoginPortal.Choose; workerStep = false; msg = ""; pass = "" }) {
                         Text("← Back to portal selection", color = Orchid, fontWeight = FontWeight.Bold)
                     }
                 }
@@ -118,31 +119,57 @@ fun LoginScreen(onLoggedIn: () -> Unit) {
                             modifier = Modifier.clip(RoundedCornerShape(50)).background(Color(0xFFF7EDF8)).padding(horizontal = 9.dp, vertical = 7.dp))
                     }
                     Spacer(Modifier.height(16.dp))
-                    LabeledField(user, { user = it; msg = "" }, if (portal == LoginPortal.Admin) "Username" else "Email address or mobile number",
-                        keyboard = if (portal == LoginPortal.Admin) KeyboardType.Text else KeyboardType.Email)
-                    Spacer(Modifier.height(8.dp))
-                    LabeledField(pass, { pass = it; msg = "" }, "Password", password = true)
-                    if (msg.isNotBlank()) {
-                        Spacer(Modifier.height(8.dp))
-                        Text(msg, color = if (isError) Bad else Good, fontSize = 13.sp)
-                    }
-                    Spacer(Modifier.height(14.dp))
-                    GradientButton(if (busy) "Please wait…" else if (portal == LoginPortal.Admin) "Sign in to Admin Portal" else "Sign in to Worker Portal",
-                        Modifier.fillMaxWidth(), enabled = !busy && user.isNotBlank() && pass.isNotBlank()) {
-                        scope.launch {
-                            busy = true
+                    if (portal == LoginPortal.Worker && !workerStep) {
+                        LabeledField(user, { user = it; msg = "" }, "Email address or mobile number", keyboard = KeyboardType.Email)
+                        if (msg.isNotBlank()) {
+                            Spacer(Modifier.height(8.dp))
+                            Text(msg, color = if (isError) Bad else Good, fontSize = 13.sp)
+                        }
+                        Spacer(Modifier.height(14.dp))
+                        GradientButton("Continue", Modifier.fillMaxWidth(), enabled = !busy && user.isNotBlank()) {
+                            workerStep = true
                             msg = ""
-                            try {
-                                api.baseUrl = server
-                                if (portal == LoginPortal.Admin) api.post("login", mapOf("username" to user.trim(), "password" to pass))
-                                else api.post("worker_login", mapOf("identifier" to user.trim(), "password" to pass))
-                                api.rememberedRole = if (portal == LoginPortal.Admin) "admin" else "worker"
-                                onLoggedIn()
-                            } catch (e: Exception) {
-                                isError = true
-                                msg = e.message ?: "Sign in failed"
+                        }
+                    } else {
+                        if (portal == LoginPortal.Worker) {
+                            Text("Sign in as", color = Muted, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                            Text(user, color = Ink, fontSize = 14.sp, fontWeight = FontWeight.Bold,
+                                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(13.dp)).background(Color(0xFFF4F7F8)).padding(13.dp))
+                            TextButton(onClick = { workerStep = false; pass = ""; msg = "" }) {
+                                Text("← Change email/mobile", color = Orchid, fontWeight = FontWeight.Bold)
                             }
-                            busy = false
+                        } else {
+                            LabeledField(user, { user = it; msg = "" }, "Username", keyboard = KeyboardType.Text)
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        LabeledField(pass, { pass = it; msg = "" }, "Password", password = true)
+                        if (portal == LoginPortal.Worker) {
+                            Spacer(Modifier.height(6.dp))
+                            Text("First-time access? If Admin has already added you, use your passport number once. You can create your own password after sign in.",
+                                color = Muted, fontSize = 11.sp, lineHeight = 16.sp)
+                        }
+                        if (msg.isNotBlank()) {
+                            Spacer(Modifier.height(8.dp))
+                            Text(msg, color = if (isError) Bad else Good, fontSize = 13.sp)
+                        }
+                        Spacer(Modifier.height(14.dp))
+                        GradientButton(if (busy) "Please wait…" else if (portal == LoginPortal.Admin) "Sign in to Admin Portal" else "Sign in to Worker Portal",
+                            Modifier.fillMaxWidth(), enabled = !busy && user.isNotBlank() && pass.isNotBlank()) {
+                            scope.launch {
+                                busy = true
+                                msg = ""
+                                try {
+                                    api.baseUrl = server
+                                    if (portal == LoginPortal.Admin) api.post("login", mapOf("username" to user.trim(), "password" to pass))
+                                    else api.post("worker_login", mapOf("identifier" to user.trim(), "password" to pass))
+                                    api.rememberedRole = if (portal == LoginPortal.Admin) "admin" else "worker"
+                                    onLoggedIn()
+                                } catch (e: Exception) {
+                                    isError = true
+                                    msg = e.message ?: "Sign in failed"
+                                }
+                                busy = false
+                            }
                         }
                     }
                     if (portal == LoginPortal.Worker) {
