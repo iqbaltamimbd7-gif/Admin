@@ -20,7 +20,7 @@ sealed interface Session {
     data object Checking : Session
     data class CheckFailed(val message: String) : Session
     data object LoggedOut : Session
-    data class Admin(val username: String, val displayName: String) : Session
+    data class Admin(val username: String, val displayName: String, val profilePhoto: String?) : Session
     data class Worker(val name: String, val mustSetPassword: Boolean) : Session
 }
 
@@ -48,15 +48,29 @@ private fun Root() {
     suspend fun refresh() {
         session = Session.Checking
         session = try {
-            val r = api.get("setup_status")
-            when {
-                !r.optBoolean("logged_in") -> Session.LoggedOut
-                r.optString("role") == "admin" -> {
-                    val username = r.optString("username", "Administrator")
-                    val displayName = try { api.adminProfile().optJSONObject("profile")?.optString("name")?.trim().orEmpty() } catch (_: Exception) { "" }
-                    Session.Admin(username, displayName.ifBlank { friendlyAdminName(username) })
+            // Admin and Worker use separate PHP sessions/cookies on the existing API.
+            val adminStatus = api.get("setup_status")
+            if (adminStatus.optBoolean("logged_in")) {
+                val username = adminStatus.optString("username", "Administrator")
+                val profile = try { api.adminProfile().optJSONObject("profile") } catch (_: Exception) { null }
+                val displayName = profile?.optString("name")?.trim().orEmpty()
+                val photo = profile?.optString("photo")?.takeIf { it.isNotBlank() && it != "null" }
+                Session.Admin(username, displayName.ifBlank { friendlyAdminName(username) }, photo)
+            } else {
+                val workerStatus = try {
+                    api.get("worker_session")
+                } catch (e: ApiException) {
+                    if (e.authRequired) null else throw e
                 }
-                else -> Session.Worker(r.optString("username", "Worker"), r.optBoolean("must_set_password"))
+                if (workerStatus == null) {
+                    Session.LoggedOut
+                } else {
+                    val worker = workerStatus.optJSONObject("worker")
+                    Session.Worker(
+                        worker?.optString("name")?.takeIf { it.isNotBlank() } ?: "Worker",
+                        workerStatus.optBoolean("must_set_password")
+                    )
+                }
             }
         } catch (e: ApiException) { Session.CheckFailed(e.message ?: "সংযোগ ব্যর্থ") }
     }
@@ -81,7 +95,7 @@ private fun Root() {
             SoftButton("লগইন স্ক্রিনে যান") { session = Session.LoggedOut }
         }
         Session.LoggedOut -> LoginScreen(onLoggedIn = { scope.launch { refresh() } })
-        is Session.Admin -> AdminApp(username = s.username, displayName = s.displayName, onLogout = { scope.launch { api.logout("admin"); session = Session.LoggedOut } })
+        is Session.Admin -> AdminApp(username = s.username, displayName = s.displayName, profilePhoto = s.profilePhoto, onLogout = { scope.launch { api.logout("admin"); session = Session.LoggedOut } })
         is Session.Worker ->
             if (s.mustSetPassword) SetPasswordScreen(onDone = { scope.launch { refresh() } }, onLogout = { scope.launch { api.logout("worker"); session = Session.LoggedOut } })
             else WorkerApp(name = s.name, onLogout = { scope.launch { api.logout("worker"); session = Session.LoggedOut } })

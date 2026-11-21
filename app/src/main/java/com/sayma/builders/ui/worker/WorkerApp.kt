@@ -47,13 +47,22 @@ fun WorkerApp(name: String, onLogout: () -> Unit) {
     val api = apiOf()
     var tab by remember { mutableStateOf(WTab.Home) }
     var screen by remember { mutableStateOf<WScreen?>(null) }
+    var headerPhoto by remember { mutableStateOf<String?>(null) }
     val (state, reload) = useLoad(Unit, onAuthLost = onLogout) { api.get("worker_dashboard") }
+
+    LaunchedEffect(Unit) {
+        headerPhoto = try {
+            val photo = api.file("worker_view_profile_photo", emptyMap(), "worker-profile.jpg")
+            val mime = photo.mime.ifBlank { "image/jpeg" }
+            "data:$mime;base64," + android.util.Base64.encodeToString(photo.bytes, android.util.Base64.NO_WRAP)
+        } catch (_: Exception) { null }
+    }
 
     BackHandler(enabled = screen != null || tab != WTab.Home) {
         if (screen != null) screen = null else tab = WTab.Home
     }
 
-    CompositionLocalProvider(LocalUserDisplayName provides name) {
+    CompositionLocalProvider(LocalUserDisplayName provides name, LocalUserProfilePhoto provides headerPhoto) {
         Scaffold(
             containerColor = Color.Transparent,
             bottomBar = {
@@ -106,7 +115,7 @@ private fun ProfilePhoto(worker: JSONObject, size: Int = 64) {
 @Composable
 private fun QuickLinkTile(
     label: String,
-    glyph: String,
+    icon: ImageVector,
     tint: Color,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
@@ -128,7 +137,7 @@ private fun QuickLinkTile(
                 .background(Brush.linearGradient(listOf(tint, tint.copy(alpha = .78f)))),
             contentAlignment = Alignment.Center
         ) {
-            Text(glyph, color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)
+            Icon(icon, contentDescription = label, tint = Color.White, modifier = Modifier.size(22.dp))
         }
         Spacer(Modifier.height(7.dp))
         Text(
@@ -176,16 +185,16 @@ private fun HomeTab(
         }
         Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                QuickLinkTile("Payslips", "▤", Color(0xFF9E4CC0), Modifier.weight(1f)) { onSelectTab(WTab.Payslips) }
-                QuickLinkTile("Bank Account", "▣", Color(0xFF278FE2), Modifier.weight(1f)) { open(WScreen.Bank) }
-                QuickLinkTile("Payment Proof", "↑", Color(0xFFE34D63), Modifier.weight(1f)) { open(WScreen.Payments) }
-                QuickLinkTile("My Site", "⌂", Color(0xFFFF792F), Modifier.weight(1f)) { open(WScreen.Site) }
+                QuickLinkTile("Payslips", Icons.Filled.Receipt, Color(0xFF9E4CC0), Modifier.weight(1f)) { onSelectTab(WTab.Payslips) }
+                QuickLinkTile("Bank Account", Icons.Filled.AccountBalance, Color(0xFF278FE2), Modifier.weight(1f)) { open(WScreen.Bank) }
+                QuickLinkTile("Payment Proof", Icons.Filled.Payment, Color(0xFFE34D63), Modifier.weight(1f)) { open(WScreen.Payments) }
+                QuickLinkTile("My Site", Icons.Filled.Home, Color(0xFFFF792F), Modifier.weight(1f)) { open(WScreen.Site) }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                QuickLinkTile("Leave", "▦", Color(0xFFE8BD35), Modifier.weight(1f)) { onSelectTab(WTab.Leave) }
-                QuickLinkTile("Clock-in", "◷", Color(0xFF7778D9), Modifier.weight(1f)) { onSelectTab(WTab.ClockIn) }
-                QuickLinkTile("Payment History", "▧", Color(0xFF45B3E2), Modifier.weight(1f)) { open(WScreen.Payments) }
-                QuickLinkTile("Profile", "♙", Color(0xFF35B19A), Modifier.weight(1f)) { onSelectTab(WTab.Profile) }
+                QuickLinkTile("Leave", Icons.Filled.Event, Color(0xFFE8BD35), Modifier.weight(1f)) { onSelectTab(WTab.Leave) }
+                QuickLinkTile("Clock-in", Icons.Filled.AccessTime, Color(0xFF7778D9), Modifier.weight(1f)) { onSelectTab(WTab.ClockIn) }
+                QuickLinkTile("Payment History", Icons.Filled.History, Color(0xFF45B3E2), Modifier.weight(1f)) { open(WScreen.Payments) }
+                QuickLinkTile("Profile", Icons.Filled.Person, Color(0xFF35B19A), Modifier.weight(1f)) { onSelectTab(WTab.Profile) }
             }
         }
 

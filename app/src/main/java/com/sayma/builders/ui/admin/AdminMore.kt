@@ -5,12 +5,17 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -86,35 +91,83 @@ fun DocumentsScreen(onBack: () -> Unit) {
 
     ScreenScroll {
         BackBar("Documents", "Company documents", onBack)
+
+        Column(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))
+                .background(Brush.linearGradient(listOf(Color(0xFF273A75), Color(0xFF3686B7), Color(0xFF4DB6A7))))
+                .padding(18.dp)
+        ) {
+            Text("CYBER BUILDERS  ·  DOCUMENT HUB", color = Color.White.copy(alpha = .82f), fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.3.sp)
+            Spacer(Modifier.height(7.dp))
+            Text("Company Documents", color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
+            Text("Your company files, permits and records in one organised space.", color = Color.White.copy(alpha = .9f), fontSize = 11.sp, lineHeight = 16.sp)
+            Spacer(Modifier.height(14.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(Color.White.copy(alpha = .16f)).padding(10.dp)) {
+                    Text("DOCUMENTS", color = Color.White.copy(alpha = .78f), fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                    Text((state as? UiState.Ready<Pair<List<org.json.JSONObject>, List<String>>>)?.value?.first?.size?.toString() ?: "—", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
+                }
+                Column(Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(Color.White.copy(alpha = .16f)).padding(10.dp)) {
+                    Text("CATEGORIES", color = Color.White.copy(alpha = .78f), fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                    Text((state as? UiState.Ready<Pair<List<org.json.JSONObject>, List<String>>>)?.value?.second?.size?.toString() ?: "—", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
+                }
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            GradientButton("+ Upload document", Modifier.weight(1f)) {
+            GradientButton("＋ Upload document", Modifier.weight(1f)) {
                 val cats = (state as? UiState.Ready<Pair<List<org.json.JSONObject>, List<String>>>)?.value?.second ?: emptyList()
                 openNew(cats)
             }
             SoftButton("↻ Refresh", onClick = reload.trigger)
         }
         if (err.isNotBlank() && !showForm && deleteTarget == null) Text(err, color = Bad)
+
         Loaded(state, reload) { (docs, cats) ->
             val allCats = (listOf("ALL") + cats.ifEmpty { docs.map { it.str("category") }.distinct() }).distinct()
+            SectionTitle("Browse by category")
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                allCats.forEach { c -> FilterChip(selected = filter == c, onClick = { filter = c }, label = { Text(c) }) }
+                allCats.forEach { c ->
+                    FilterChip(selected = filter == c, onClick = { filter = c }, label = { Text(c) })
+                }
             }
-            Spacer(Modifier.height(8.dp))
             val shown = docs.filter { filter == "ALL" || it.str("category").equals(filter, true) }
-            SaymaCard {
-                if (shown.isEmpty()) EmptyState("No documents")
+            SectionTitle(if (filter == "ALL") "All company files" else "$filter files") {
+                Text("${shown.size} files", color = Muted, fontSize = 10.sp)
+            }
+            if (shown.isEmpty()) {
+                SaymaCard { EmptyState("No documents in this category", "Upload a company file to get started.") }
+            } else {
                 shown.forEach { d ->
                     val exp = d.str("expiry_date")
-                    Column(Modifier.fillMaxWidth().padding(vertical = 7.dp)) {
-                        Text(d.str("title").ifBlank { d.str("original_name") }, fontWeight = FontWeight.Bold)
-                        Text("${d.str("category")} · v${d.str("version")}" + if (exp.isNotBlank()) " · expires $exp" else "", color = Muted, fontSize = 12.sp)
-                        Text(d.str("original_name"), color = Muted, fontSize = 11.sp)
+                    val accent = documentAccent(d.str("category"))
+                    val filename = d.str("original_name")
+                    val fileType = filename.substringAfterLast('.', "FILE").uppercase().take(4)
+                    SaymaCard(Modifier.padding(bottom = 9.dp)) {
+                        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                            Box(
+                                Modifier.size(48.dp).clip(RoundedCornerShape(15.dp))
+                                    .background(Brush.linearGradient(listOf(accent, accent.copy(alpha = .72f)))),
+                                contentAlignment = androidx.compose.ui.Alignment.Center
+                            ) {
+                                Text(fileType, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(d.str("title").ifBlank { filename }, color = Ink, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, maxLines = 2)
+                                Text(d.str("category").ifBlank { "Other" } + "  ·  Version " + d.str("version").ifBlank { "1" }, color = Muted, fontSize = 10.sp)
+                                if (exp.isNotBlank()) Text("Expiry: $exp", color = accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Chip(d.str("category").ifBlank { "FILE" }.uppercase().take(9), accent)
+                        }
+                        Spacer(Modifier.height(9.dp))
+                        Text(filename, color = Muted, fontSize = 10.sp, maxLines = 1)
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                            TextButton(onClick = { opener.open { api.file("view_document", mapOf("id" to d.str("id")), d.str("original_name")) } }) { Text("Open") }
+                            TextButton(onClick = { opener.open { api.file("view_document", mapOf("id" to d.str("id")), filename) } }) { Text("Open", color = Teal) }
                             TextButton(onClick = { openEdit(d) }) { Text("Edit", color = Orchid) }
                             TextButton(onClick = { deleteTarget = d }) { Text("Delete", color = Bad) }
                         }
-                        HorizontalDivider(color = Line)
                     }
                 }
             }
@@ -327,6 +380,16 @@ fun SalarySlipsScreen(onBack: () -> Unit) {
         }
     }
 }
+
+private fun documentAccent(category: String): Color = when (category.lowercase()) {
+    "permit", "visa", "cidb", "work permit" -> Color(0xFF278FE2)
+    "finance", "invoice", "receipt", "tax" -> Color(0xFF35A78B)
+    "contract", "legal", "agreement" -> Color(0xFF9A58BF)
+    "insurance", "medical", "safety" -> Color(0xFFE29A32)
+    "project", "site", "drawing" -> Color(0xFFE05C78)
+    else -> Color(0xFF6475C9)
+}
+
 
 @Composable
 fun ToolsScreen(onBack: () -> Unit) {

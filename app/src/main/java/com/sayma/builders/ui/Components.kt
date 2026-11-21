@@ -1,6 +1,9 @@
 package com.sayma.builders.ui
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.util.Base64
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.compose.animation.core.RepeatMode
@@ -27,6 +30,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.res.painterResource
@@ -42,6 +47,7 @@ import com.sayma.builders.data.FilePart
 import kotlinx.coroutines.launch
 
 val LocalUserDisplayName = compositionLocalOf { "Admin" }
+val LocalUserProfilePhoto = compositionLocalOf<String?> { null }
 
 sealed interface UiState<out T> {
     data object Loading : UiState<Nothing>
@@ -126,6 +132,28 @@ fun SaymaCard(modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, cont
 }
 
 @Composable
+fun ProfileAvatar(name: String, size: Int = 40, photoData: String? = LocalUserProfilePhoto.current) {
+    val bitmap: Bitmap? = remember(photoData) {
+        try {
+            val raw = photoData?.takeIf { it.isNotBlank() } ?: return@remember null
+            val encoded = if (raw.contains("base64,")) raw.substringAfter("base64,") else raw
+            val bytes = Base64.decode(encoded, Base64.DEFAULT)
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+        } catch (_: Exception) { null }
+    }
+    if (bitmap != null) {
+        Image(
+            bitmap.asImageBitmap(),
+            contentDescription = "$name profile photo",
+            modifier = Modifier.size(size.dp).clip(CircleShape),
+            contentScale = ContentScale.Crop
+        )
+    } else {
+        Avatar(name, size)
+    }
+}
+
+@Composable
 fun BrandHeader(profileName: String = LocalUserDisplayName.current) {
     val displayName = profileName.substringBefore("@").take(15).ifBlank { "Admin" }
     val shape = RoundedCornerShape(24.dp)
@@ -152,7 +180,7 @@ fun BrandHeader(profileName: String = LocalUserDisplayName.current) {
                 .padding(start = 5.dp, end = 10.dp, top = 5.dp, bottom = 5.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Avatar(displayName, 32)
+            ProfileAvatar(displayName, 32)
             Spacer(Modifier.width(7.dp))
             Column {
                 Text(displayName, color = Ink, fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1)
@@ -167,7 +195,7 @@ fun ScreenHeader(
     title: String,
     subtitle: String = "",
     action: (@Composable () -> Unit)? = null,
-    profileName: String = "Admin"
+    profileName: String = LocalUserDisplayName.current
 ) {
     Column(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
         BrandHeader(profileName)

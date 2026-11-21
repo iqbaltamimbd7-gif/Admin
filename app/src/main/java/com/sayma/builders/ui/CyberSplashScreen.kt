@@ -66,7 +66,7 @@ fun CyberSplashScreen() {
                         contentDescription = "Cyber Builders desktop portal preview",
                         modifier = Modifier.fillMaxWidth().aspectRatio(1891f / 905f)
                             .clip(RoundedCornerShape(15.dp)),
-                        contentScale = ContentScale.Crop
+                        contentScale = ContentScale.Fit
                     )
                 }
                 Box(
