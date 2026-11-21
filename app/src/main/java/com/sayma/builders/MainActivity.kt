@@ -15,6 +15,15 @@ import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
+import android.webkit.JavascriptInterface
+import android.util.Base64
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
+import java.security.KeyStore
+import javax.crypto.Cipher
+import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
+import javax.crypto.spec.GCMParameterSpec
 import android.webkit.WebViewClient
 import android.webkit.DownloadListener
 import android.widget.FrameLayout
@@ -100,6 +109,7 @@ class MainActivity : ComponentActivity() {
         setContentView(root)
 
         configureWebView()
+        webView.addJavascriptInterface(NativeBridge(), "SaymaNative")
         if (savedInstanceState != null) {
             webView.restoreState(savedInstanceState)
         } else {
@@ -261,6 +271,55 @@ class MainActivity : ComponentActivity() {
         WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG)
     }
 
+    /**
+     * Encrypts offline JSON snapshots and queued file payloads with an AES-GCM
+     * key held by Android Keystore. The key never leaves this device.
+     */
+    private inner class NativeBridge {
+        @JavascriptInterface
+        fun encrypt(plainText: String): String {
+            return try {
+                val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+                cipher.init(Cipher.ENCRYPT_MODE, offlineKey())
+                val encrypted = cipher.doFinal(plainText.toByteArray(Charsets.UTF_8))
+                val combined = cipher.iv + encrypted
+                Base64.encodeToString(combined, Base64.NO_WRAP)
+            } catch (e: Exception) { "" }
+        }
+
+        @JavascriptInterface
+        fun decrypt(cipherText: String): String {
+            return try {
+                val combined = Base64.decode(cipherText, Base64.NO_WRAP)
+                if (combined.size <= 12) return ""
+                val iv = combined.copyOfRange(0, 12)
+                val encrypted = combined.copyOfRange(12, combined.size)
+                val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+                cipher.init(Cipher.DECRYPT_MODE, offlineKey(), GCMParameterSpec(128, iv))
+                String(cipher.doFinal(encrypted), Charsets.UTF_8)
+            } catch (e: Exception) { "" }
+        }
+
+        @JavascriptInterface
+        fun isNative(): Boolean = true
+    }
+
+    private fun offlineKey(): SecretKey {
+        val alias = "sayma.builders.offline.cache.key.v1"
+        val keyStore = KeyStore.getInstance("AndroidKeyStore")
+        keyStore.load(null)
+        val existing = keyStore.getKey(alias, null) as? SecretKey
+        if (existing != null) return existing
+        val generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
+        val spec = KeyGenParameterSpec.Builder(alias, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
+            .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+            .setRandomizedEncryptionRequired(true)
+            .setUserAuthenticationRequired(false)
+            .build()
+        generator.init(spec)
+        return generator.generateKey()
+    }
     private fun createCameraIntent(): Intent? {
         return try {
             val folder = File(cacheDir, "portal-captures").apply { mkdirs() }
