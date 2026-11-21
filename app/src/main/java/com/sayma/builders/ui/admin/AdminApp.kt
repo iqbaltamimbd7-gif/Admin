@@ -79,8 +79,8 @@ fun AdminApp(username: String, onLogout: () -> Unit) {
                 else -> Loaded(state, reload) { data ->
                     val y = year.ifBlank { data.years.lastOrNull { it == "2026" } ?: data.years.last() }
                     when {
-                        s is AdminScreen.WorkerDetail -> WorkerDetailScreen(data, s.worker, y) { screen = null }
-                        s is AdminScreen.ProjectDetail -> ProjectDetailScreen(data, s.project) { screen = null }
+                        s is AdminScreen.WorkerDetail -> WorkerDetailScreen(data, s.worker, y, onRefresh = { screen = null; reload.trigger() }) { screen = null }
+                        s is AdminScreen.ProjectDetail -> ProjectDetailScreen(data, s.project, onRefresh = { screen = null; reload.trigger() }) { screen = null }
                         s is AdminScreen.Reminders -> RemindersScreen(data) { screen = null }
                         else -> when (tab) {
                             AdminTab.Home -> HomeScreen(data, username, y, { year = it }, { screen = it })
