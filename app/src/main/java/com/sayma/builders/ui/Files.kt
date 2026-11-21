@@ -89,7 +89,6 @@ fun FileViewer(file: FileData, onClose: () -> Unit) {
     }
 }
 
-private fun Modifier: Modifier = this.then(Modifier.fillMaxSize())
 
 @Composable
 private fun Centered(text: String) = Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) { Text(text, color = Muted) }
