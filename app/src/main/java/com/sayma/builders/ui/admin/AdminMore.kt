@@ -30,8 +30,9 @@ fun MoreScreen(username: String, open: (AdminScreen) -> Unit, onLogout: () -> Un
         Triple("Expiry reminders", "Permit and CIDB due dates", AdminScreen.Reminders)
     )
     ScreenScroll {
-        ScreenHeader("More", "Signed in as $username")
-        SaymaCard { items.forEach { (t, d, s) -> ListRow(t, d, "›", "", onClick = { open(s) }) } }
+        ScreenHeader("Workspace", "All company tools and records", profileName = username)
+        SectionTitle("Management modules")
+        SaymaCard { items.forEach { (t, d, s) -> ListRow(t, d, "›", "", avatar = t.take(1), onClick = { open(s) }) } }
         Spacer(Modifier.height(12.dp))
         SoftButton("Refresh data", Modifier.fillMaxWidth(), onClick = reload.trigger)
         Spacer(Modifier.height(8.dp))
