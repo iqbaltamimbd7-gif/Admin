@@ -71,7 +71,7 @@ fun WorkerApp(name: String, onLogout: () -> Unit) {
 @Composable
 private fun MoreTab(name: String, open: (WScreen) -> Unit, onLogout: () -> Unit) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
-        ScreenHeader("More", "Signed in as $name")
+        ScreenHeader("Workspace", "Your worker tools and records", profileName = name)
         SaymaCard {
             ListRow("Payments", "Submit & track payment confirmations", "›", "", onClick = { open(WScreen.Payments) })
             ListRow("Leave requests", "Apply for leave and attach MC", "›", "", onClick = { open(WScreen.Leave) })
@@ -106,7 +106,7 @@ private fun HomeTab(d: JSONObject, fallbackName: String, open: (WScreen) -> Unit
     val years = ledger.keys().asSequence().sortedDescending().toList()
     val subs = d.optJSONArray("submissions").objects()
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 20.dp)) {
-        ScreenHeader("Hi, ${w.str("name").ifBlank { fallbackName }.substringBefore(' ')}.", "Worker portal")
+        ScreenHeader("Hi, ${w.str("name").ifBlank { fallbackName }.substringBefore(' ')}.", "Worker portal", profileName = w.str("name").ifBlank { fallbackName })
         Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(HeroBrush).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             ProfilePhoto(w)
             Spacer(Modifier.width(14.dp))
