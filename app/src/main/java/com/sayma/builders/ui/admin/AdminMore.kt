@@ -2,6 +2,8 @@ package com.sayma.builders.ui.admin
 
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -39,23 +41,57 @@ fun MoreScreen(username: String, open: (AdminScreen) -> Unit, onLogout: () -> Un
 @Composable
 fun DocumentsScreen(onBack: () -> Unit) {
     val api = apiOf()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var err by remember { mutableStateOf("") }
     var filter by remember { mutableStateOf("ALL") }
+    var editing by remember { mutableStateOf<org.json.JSONObject?>(null) }
+    var deleteTarget by remember { mutableStateOf<org.json.JSONObject?>(null) }
+    var showForm by remember { mutableStateOf(false) }
+    var title by remember { mutableStateOf("") }
+    var category by remember { mutableStateOf("Other") }
+    var issueDate by remember { mutableStateOf("") }
+    var expiryDate by remember { mutableStateOf("") }
+    var notes by remember { mutableStateOf("") }
+    var pickedPart by remember { mutableStateOf<FilePart?>(null) }
+    var saving by remember { mutableStateOf(false) }
     val (opener, host) = rememberFileOpener { err = it }
     val (state, reload) = useLoad(Unit) {
         val docs = api.get("list_documents").optJSONArray("documents").objects()
-        val cats = try { api.get("list_document_categories").let { it.optJSONArray("categories") ?: it.optJSONArray("items") }.let { arr ->
-            (0 until (arr?.length() ?: 0)).map { i -> arr!!.opt(i).let { c -> if (c is org.json.JSONObject) c.str("label").ifBlank { c.str("key") } else c.toString() } }
-        } } catch (_: ApiException) { emptyList() }
+        val cats = try {
+            api.get("list_document_categories").let { it.optJSONArray("categories") ?: it.optJSONArray("items") }.let { arr ->
+                (0 until (arr?.length() ?: 0)).map { i ->
+                    arr!!.opt(i).let { c -> if (c is org.json.JSONObject) c.str("key").ifBlank { c.str("label") } else c.toString() }
+                }
+            }
+        } catch (_: ApiException) { emptyList() }
         docs to cats
     }
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) pickedPart = readUri(context, uri, "file")
+    }
     host()
+
+    fun openNew(cats: List<String>) {
+        editing = null; title = ""; category = cats.firstOrNull() ?: "Other"
+        issueDate = ""; expiryDate = ""; notes = ""; pickedPart = null; err = ""; showForm = true
+    }
+    fun openEdit(d: org.json.JSONObject) {
+        editing = d; title = d.str("title"); category = d.str("category").ifBlank { "Other" }
+        issueDate = d.str("issue_date"); expiryDate = d.str("expiry_date"); notes = d.str("notes")
+        pickedPart = null; err = ""; showForm = true
+    }
+
     ScreenScroll {
         BackBar("Documents", "Company documents", onBack)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = reload.trigger) { Text("↻ Refresh documents", color = Orchid, fontWeight = FontWeight.Bold) }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            GradientButton("+ Upload document", Modifier.weight(1f)) {
+                val cats = (state as? UiState.Ready)?.value?.second ?: emptyList()
+                openNew(cats)
+            }
+            SoftButton("↻ Refresh", onClick = reload.trigger)
         }
-        if (err.isNotBlank()) Text(err, color = Bad)
+        if (err.isNotBlank() && !showForm && deleteTarget == null) Text(err, color = Bad)
         Loaded(state, reload) { (docs, cats) ->
             val allCats = (listOf("ALL") + cats.ifEmpty { docs.map { it.str("category") }.distinct() }).distinct()
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -67,17 +103,92 @@ fun DocumentsScreen(onBack: () -> Unit) {
                 if (shown.isEmpty()) EmptyState("No documents")
                 shown.forEach { d ->
                     val exp = d.str("expiry_date")
-                    ListRow(
-                        d.str("title").ifBlank { d.str("original_name") },
-                        "${d.str("category")} · v${d.str("version")}" + if (exp.isNotBlank()) " · expires $exp" else "",
-                        "Open", ""
-                    ) { opener.open { api.file("view_document", mapOf("id" to d.str("id")), d.str("original_name")) } }
+                    Column(Modifier.fillMaxWidth().padding(vertical = 7.dp)) {
+                        Text(d.str("title").ifBlank { d.str("original_name") }, fontWeight = FontWeight.Bold)
+                        Text("${d.str("category")} · v${d.str("version")}" + if (exp.isNotBlank()) " · expires $exp" else "", color = Muted, fontSize = 12.sp)
+                        Text(d.str("original_name"), color = Muted, fontSize = 11.sp)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                            TextButton(onClick = { opener.open { api.file("view_document", mapOf("id" to d.str("id")), d.str("original_name")) } }) { Text("Open") }
+                            TextButton(onClick = { openEdit(d) }) { Text("Edit", color = Orchid) }
+                            TextButton(onClick = { deleteTarget = d }) { Text("Delete", color = Bad) }
+                        }
+                        HorizontalDivider(color = Line)
+                    }
                 }
             }
         }
     }
-}
 
+    if (showForm) {
+        val cats = (state as? UiState.Ready)?.value?.second ?: emptyList()
+        AlertDialog(
+            onDismissRequest = { if (!saving) showForm = false },
+            title = { Text(if (editing == null) "Upload company document" else "Update company document") },
+            text = {
+                Column(Modifier.fillMaxWidth().heightIn(max = 460.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    LabeledField(title, { title = it }, "Document title")
+                    Text("Category", color = Muted, fontSize = 12.sp)
+                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        (cats.ifEmpty { listOf("Other") }).forEach { c ->
+                            FilterChip(selected = category == c, onClick = { category = c }, label = { Text(c) })
+                        }
+                    }
+                    LabeledField(issueDate, { issueDate = it }, "Issue date (YYYY-MM-DD)")
+                    LabeledField(expiryDate, { expiryDate = it }, "Expiry date (YYYY-MM-DD)")
+                    LabeledField(notes, { notes = it }, "Notes")
+                    SoftButton(
+                        if (pickedPart != null) "Selected: ${pickedPart!!.name}" else if (editing != null) "Choose replacement file (optional)" else "Choose file (required)",
+                        Modifier.fillMaxWidth()
+                    ) { picker.launch(arrayOf("*/*")) }
+                    Text("PDF, image or Office file · maximum 15 MB. Replacing a file uploads a new version.", color = Muted, fontSize = 11.sp)
+                    if (err.isNotBlank()) Text(err, color = Bad, fontSize = 12.sp)
+                }
+            },
+            confirmButton = {
+                GradientButton(if (saving) "Saving…" else "Save document", enabled = !saving) {
+                    if (title.isBlank()) { err = "Document title is required."; return@GradientButton }
+                    if (editing == null && pickedPart == null) { err = "Choose a document file."; return@GradientButton }
+                    scope.launch {
+                        saving = true; err = ""
+                        try {
+                            val fields = mapOf("title" to title.trim(), "category" to category, "issue_date" to issueDate.trim(), "expiry_date" to expiryDate.trim(), "notes" to notes.trim())
+                            val part = pickedPart
+                            if (part != null) {
+                                if (part.bytes.size > 15 * 1024 * 1024) throw ApiException("File exceeds 15 MB limit.")
+                                api.post("upload_document", fields, listOf(part))
+                            } else {
+                                val doc = editing ?: throw ApiException("Choose a file.")
+                                api.post("update_document", fields + ("id" to doc.str("id")))
+                            }
+                            showForm = false; editing = null; pickedPart = null; reload.trigger()
+                        } catch (e: Exception) { err = e.message ?: "Document save failed." }
+                        saving = false
+                    }
+                }
+            },
+            dismissButton = { TextButton(onClick = { if (!saving) showForm = false }) { Text("Cancel") } }
+        )
+    }
+
+    deleteTarget?.let { doc ->
+        AlertDialog(
+            onDismissRequest = { deleteTarget = null },
+            title = { Text("Delete document?") },
+            text = { Text("'${doc.str("title").ifBlank { doc.str("original_name") }}' will be removed from the company document register.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    scope.launch {
+                        try {
+                            api.post("delete_document", mapOf("id" to doc.str("id")))
+                            deleteTarget = null; reload.trigger()
+                        } catch (e: Exception) { err = e.message ?: "Delete failed."; deleteTarget = null }
+                    }
+                }) { Text("Delete", color = Bad) }
+            },
+            dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text("Cancel") } }
+        )
+    }
+}
 @Composable
 fun AttendanceScreen(onBack: () -> Unit) {
     val api = apiOf()
