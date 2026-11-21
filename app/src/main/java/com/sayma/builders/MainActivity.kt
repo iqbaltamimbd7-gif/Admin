@@ -283,7 +283,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun downloadName(disposition: String?, url: String): String {
-        val fromHeader = disposition?.let { Regex("filename\*?=(?:UTF-8''|\")?([^;\" ]+)", RegexOption.IGNORE_CASE).find(it)?.groupValues?.getOrNull(1) }
+        val fromHeader = disposition?.let { Regex("filename[^=]*=([^;]+)", RegexOption.IGNORE_CASE).find(it)?.groupValues?.getOrNull(1)?.trim()?.trim('"') }
         val raw = fromHeader ?: Uri.parse(url).lastPathSegment ?: "sayma-download"
         return URLDecoder.decode(raw, "UTF-8").replace(Regex("[^A-Za-z0-9._ -]"), "_").take(120).ifBlank { "sayma-download" }
     }
