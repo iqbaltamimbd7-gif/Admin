@@ -46,24 +46,28 @@ fun HomeScreen(data: AdminData, username: String, year: String, onYear: (String)
     val trades = data.workers.groupBy { it.role }.map { it.key to it.value.size }.sortedByDescending { it.second }
 
     ScreenScroll {
-        ScreenHeader("Hi, ${username.substringBefore(' ')}.", "Your SAYMA workspace")
+        ScreenHeader("Hi, ${username.substringBefore(' ')}.", "Your SAYMA workspace", profileName = username)
 
-        // Hero
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(HeroBrush).padding(18.dp)) {
-            Text("● CONNECTED · ADMIN WORKSPACE", color = Color.White.copy(alpha = .85f), fontSize = 10.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(6.dp))
-            Text("Your projects.\nYour people. All in one place.", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
+        SearchPill("", {}, "Search workers, passport, project…")
+        Spacer(Modifier.height(14.dp))
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(HeroBrush).padding(20.dp)) {
+            Text("● SAYMA BUILDERS · ADMIN WORKSPACE", color = Color.White.copy(alpha = .9f), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             Spacer(Modifier.height(10.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                HeroPill("${data.workers.size} Workers"); HeroPill("$activeSites Active sites")
+            Text("Your projects.\nYour people. All in one place.", color = Color.White, fontSize = 25.sp, lineHeight = 29.sp, fontWeight = FontWeight.ExtraBold)
+            Spacer(Modifier.height(10.dp))
+            Text("Stay on top of your workforce, site activity and company performance.", color = Color.White.copy(alpha = .92f), fontSize = 13.sp, lineHeight = 19.sp)
+            Spacer(Modifier.height(16.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                HeroPill("${data.workers.size} Workers"); HeroPill("$activeSites Active sites"); HeroPill("Connected")
             }
         }
 
-        SectionTitle("Quick Links")
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionTitle("Quick Links") { Text("Tap to open", color = Muted, fontSize = 11.sp) }
+        Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+            QuickTile("Workers", Modifier.weight(1f)) { if (data.workers.isNotEmpty()) open(AdminScreen.WorkerDetail(data.workers.first())) }
+            QuickTile("Projects", Modifier.weight(1f)) { if (data.projects.isNotEmpty()) open(AdminScreen.ProjectDetail(data.projects.first())) }
             QuickTile("Attendance", Modifier.weight(1f)) { open(AdminScreen.Attendance) }
-            QuickTile("Documents", Modifier.weight(1f)) { open(AdminScreen.Documents) }
-            QuickTile("Requests", Modifier.weight(1f)) { open(AdminScreen.Requests) }
+            QuickTile("Payments", Modifier.weight(1f)) { open(AdminScreen.Requests) }
         }
 
         SectionTitle("Permit payment collection") {
@@ -118,7 +122,12 @@ fun HomeScreen(data: AdminData, username: String, year: String, onYear: (String)
     Text(text, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = .2f)).padding(horizontal = 12.dp, vertical = 5.dp))
 
 @Composable private fun QuickTile(label: String, modifier: Modifier, onClick: () -> Unit) =
-    SaymaCard(modifier, onClick = onClick) { Text(label, fontWeight = FontWeight.Bold, color = Teal, fontSize = 13.sp) }
+    SaymaCard(modifier, onClick = onClick) {
+        Text("✧", color = Teal, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(5.dp))
+        Text(label, fontWeight = FontWeight.Bold, color = Ink, fontSize = 11.sp, maxLines = 1)
+        Text(when(label) { "Workers" -> "Team directory"; "Projects" -> "Site management"; "Attendance" -> "Daily records"; else -> "Finance overview" }, color = Muted, fontSize = 9.sp, maxLines = 2)
+    }
 
 @Composable
 internal fun ExpiryRow(e: Expiry) {
