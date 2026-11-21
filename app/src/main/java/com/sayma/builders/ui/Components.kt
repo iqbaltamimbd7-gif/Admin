@@ -9,6 +9,10 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,11 +27,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sayma.builders.SaymaApp
+import com.sayma.builders.R
 import com.sayma.builders.data.Api
 import com.sayma.builders.data.ApiException
 import com.sayma.builders.data.FileData
@@ -107,24 +114,133 @@ fun <T> Loaded(state: UiState<T>, reload: Reload, content: @Composable (T) -> Un
 
 @Composable
 fun SaymaCard(modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, content: @Composable ColumnScope.() -> Unit) {
-    val shape = RoundedCornerShape(20.dp)
-    val fill = Brush.linearGradient(listOf(Color.White, Color(0xFFFCF8FD), Color(0xFFF4FAFA)))
-    val edge = Brush.linearGradient(listOf(Mint.copy(alpha = .32f), Orchid.copy(alpha = .26f), Rose.copy(alpha = .24f)))
-    val m = modifier.fillMaxWidth().shadow(7.dp, shape).clip(shape).background(fill)
+    val shape = RoundedCornerShape(24.dp)
+    val fill = Brush.linearGradient(listOf(Color.White.copy(alpha = .97f), Color(0xFFFCF7FB), Color(0xFFF0F8F6)))
+    val edge = Brush.linearGradient(listOf(Mint.copy(alpha = .38f), Orchid.copy(alpha = .30f), Rose.copy(alpha = .28f)))
+    val m = modifier.fillMaxWidth().shadow(8.dp, shape).clip(shape).background(fill)
         .border(BorderStroke(1.dp, edge), shape)
         .let { if (onClick != null) it.clickable(onClick = onClick) else it }
     Column(m.padding(15.dp), content = content)
 }
 
 @Composable
-fun ScreenHeader(title: String, subtitle: String = "", action: (@Composable () -> Unit)? = null) {
-    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+fun BrandHeader(profileName: String = "Admin") {
+    val displayName = profileName.substringBefore("@").take(15).ifBlank { "Admin" }
+    val shape = RoundedCornerShape(24.dp)
+    Row(
+        Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 12.dp)
+            .shadow(8.dp, shape).clip(shape)
+            .background(Brush.horizontalGradient(listOf(Color.White.copy(alpha = .96f), Color(0xFFF7EAF3).copy(alpha = .96f))))
+            .border(BorderStroke(1.dp, Brush.horizontalGradient(listOf(Mint.copy(alpha = .42f), Orchid.copy(alpha = .34f)))), shape)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Image(painterResource(R.drawable.sayma_logo), "SAYMA BUILDERS", Modifier.size(42.dp).clip(CircleShape))
+        Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
-            Text("SAYMA BUILDERS SDN BHD", color = Teal, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.2.sp)
-            Text(title, style = MaterialTheme.typography.titleLarge)
-            if (subtitle.isNotBlank()) Text(subtitle, color = Muted, fontSize = 12.sp)
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text("SAYMA", color = Teal, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
+                Text(" BUILDERS", color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            }
+            Text("CONSTRUCTION MANAGEMENT", color = Muted, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, maxLines = 1)
         }
-        action?.invoke()
+        Row(
+            Modifier.clip(CircleShape).background(Color.White.copy(alpha = .78f))
+                .border(1.dp, Orchid.copy(alpha = .16f), CircleShape)
+                .padding(start = 5.dp, end = 10.dp, top = 5.dp, bottom = 5.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Avatar(displayName, 32)
+            Spacer(Modifier.width(7.dp))
+            Column {
+                Text(displayName, color = Ink, fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                Text("● Connected", color = Warn, fontSize = 9.sp, fontWeight = FontWeight.Medium)
+            }
+        }
+    }
+}
+
+@Composable
+fun ScreenHeader(
+    title: String,
+    subtitle: String = "",
+    action: (@Composable () -> Unit)? = null,
+    profileName: String = "Admin"
+) {
+    Column(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+        BrandHeader(profileName)
+        Column(Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
+            Text(
+                if (title.startsWith("Hi,")) "YOUR SAYMA WORKSPACE" else "SAYMA BUILDERS SDN BHD",
+                color = Orchid, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.35.sp
+            )
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(title, color = Ink, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f), maxLines = 1)
+                action?.invoke()
+            }
+            if (subtitle.isNotBlank()) Text(subtitle, color = Muted, fontSize = 13.sp)
+        }
+    }
+}
+
+@Composable
+fun SearchPill(value: String, onChange: (String) -> Unit, placeholder: String = "Search workers, passport, project...") {
+    Row(
+        Modifier.fillMaxWidth().height(54.dp).clip(RoundedCornerShape(19.dp))
+            .background(Color.White.copy(alpha = .92f))
+            .border(1.dp, Mint.copy(alpha = .20f), RoundedCornerShape(19.dp))
+            .padding(horizontal = 15.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(Icons.Filled.Search, contentDescription = "Search", tint = Teal, modifier = Modifier.size(21.dp))
+        Spacer(Modifier.width(12.dp))
+        Box(Modifier.weight(1f)) {
+            if (value.isBlank()) Text(placeholder, color = Muted, fontSize = 13.sp)
+            BasicTextField(
+                value = value,
+                onValueChange = onChange,
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                textStyle = androidx.compose.ui.text.TextStyle(color = Ink, fontSize = 13.sp)
+            )
+        }
+        if (value.isNotBlank()) {
+            Text("×", color = Muted, fontSize = 20.sp, modifier = Modifier.clickable { onChange("") }.padding(start = 8.dp))
+        } else {
+            Text("⌘ K", color = Teal, fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier.clip(RoundedCornerShape(9.dp)).background(Color(0xFFE6F4F1)).padding(horizontal = 8.dp, vertical = 6.dp))
+        }
+    }
+}
+
+data class SaymaNavItem(val label: String, val icon: ImageVector)
+
+@Composable
+fun SaymaBottomBar(items: List<SaymaNavItem>, selected: String, onSelect: (String) -> Unit) {
+    val shape = RoundedCornerShape(28.dp)
+    Surface(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+        color = Color.White.copy(alpha = .88f),
+        shape = shape,
+        border = BorderStroke(1.dp, Color.White.copy(alpha = .95f)),
+        shadowElevation = 13.dp
+    ) {
+        Row(Modifier.fillMaxWidth().padding(6.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            items.forEach { item ->
+                val active = item.label == selected
+                Column(
+                    Modifier.weight(1f).clip(RoundedCornerShape(18.dp))
+                        .then(if (active) Modifier.background(HeroBrush) else Modifier.background(Color.Transparent))
+                        .clickable { onSelect(item.label) }
+                        .padding(vertical = 7.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(item.icon, contentDescription = item.label, tint = if (active) Color.White else Muted, modifier = Modifier.size(21.dp))
+                    Text(item.label, color = if (active) Color.White else Muted, fontSize = 9.sp, fontWeight = if (active) FontWeight.Bold else FontWeight.Medium, maxLines = 1)
+                }
+            }
+        }
     }
 }
 
