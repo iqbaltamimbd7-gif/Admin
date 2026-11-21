@@ -74,7 +74,21 @@ class AdminData(
 
 suspend fun loadAdminData(api: Api): AdminData {
     val state = api.get("get_state").optJSONObject("state") ?: JSONObject()
-    val workers = state.optJSONArray("workers").objects().map { WorkerRec(it) }
+    val workersValue = state.opt("workers")
+    val workersJson = when (workersValue) {
+        is JSONArray -> workersValue
+        is JSONObject -> {
+            if (workersValue.has("name") || workersValue.has("passport") || workersValue.has("passport_no")) JSONArray().put(workersValue)
+            else JSONArray().apply {
+                val keys = workersValue.keys()
+                while (keys.hasNext()) workersValue.optJSONObject(keys.next())?.let { put(it) }
+            }
+        }
+        else -> JSONArray()
+    }
+    val workers = workersJson.objects().map { WorkerRec(it) }.distinctBy {
+        listOf(it.key, it.email, it.mobile, it.name).joinToString("|")
+    }
     val projects = state.optJSONArray("projects").objects().map { ProjectRec(it) }
 
     val permits = HashMap<String, MutableMap<String, JSONObject>>()

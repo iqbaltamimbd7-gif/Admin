@@ -2,6 +2,7 @@ package com.sayma.builders.ui.admin
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
@@ -35,7 +36,9 @@ private enum class AdminTab(val label: String, val icon: ImageVector) {
 }
 
 @Composable
-fun AdminApp(username: String, onLogout: () -> Unit) {
+fun AdminApp(username: String, displayName: String, profilePhoto: String? = null, onLogout: () -> Unit) {
+    val shownName = displayName.ifBlank { username }
+    CompositionLocalProvider(LocalUserDisplayName provides shownName, LocalUserProfilePhoto provides profilePhoto) {
     val api = apiOf()
     var tab by remember { mutableStateOf(AdminTab.Home) }
     var screen by remember { mutableStateOf<AdminScreen?>(null) }
@@ -45,30 +48,16 @@ fun AdminApp(username: String, onLogout: () -> Unit) {
     BackHandler(enabled = screen != null) { screen = null }
 
     Scaffold(
-        containerColor = Bg,
+        containerColor = Color.Transparent,
         bottomBar = {
-            if (screen == null) Surface(
-                color = CardBg,
-                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-                shadowElevation = 14.dp
-            ) {
-                NavigationBar(containerColor = Color.Transparent, tonalElevation = 0.dp) {
-                    AdminTab.entries.forEach { t ->
-                        NavigationBarItem(
-                            selected = tab == t, onClick = { tab = t },
-                            icon = { Icon(t.icon, t.label) }, label = { Text(t.label) },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = Orchid, selectedTextColor = Orchid,
-                                unselectedIconColor = Muted, unselectedTextColor = Muted,
-                                indicatorColor = Color(0x22B77FBA)
-                            )
-                        )
-                    }
-                }
-            }
+            if (screen == null) SaymaBottomBar(
+                items = AdminTab.entries.map { SaymaNavItem(it.label, it.icon) },
+                selected = tab.label,
+                onSelect = { label -> tab = AdminTab.entries.first { it.label == label } }
+            )
         }
     ) { pad ->
-        Box(Modifier.padding(pad).fillMaxSize().statusBarsPadding()) {
+        Box(Modifier.padding(pad).fillMaxSize().background(ScreenBrush).statusBarsPadding()) {
             val s = screen
             when {
                 s is AdminScreen.Documents -> DocumentsScreen { screen = null }
@@ -83,16 +72,17 @@ fun AdminApp(username: String, onLogout: () -> Unit) {
                         s is AdminScreen.ProjectDetail -> ProjectDetailScreen(data, s.project, onRefresh = { screen = null; reload.trigger() }) { screen = null }
                         s is AdminScreen.Reminders -> RemindersScreen(data) { screen = null }
                         else -> when (tab) {
-                            AdminTab.Home -> HomeScreen(data, username, y, { year = it }, { screen = it })
+                            AdminTab.Home -> HomeScreen(data, shownName, y, { year = it }, { screen = it }, openWorkers = { tab = AdminTab.Workers })
                             AdminTab.Workers -> WorkersScreen(data) { screen = AdminScreen.WorkerDetail(it) }
                             AdminTab.Sites -> SitesScreen(data) { screen = AdminScreen.ProjectDetail(it) }
                             AdminTab.Finance -> FinanceScreen(data, y) { year = it }
-                            AdminTab.More -> MoreScreen(username, { screen = it }, onLogout, reload)
+                            AdminTab.More -> MoreScreen(shownName, { screen = it }, onLogout, reload)
                         }
                     }
                 }
             }
         }
+    }
     }
 }
 

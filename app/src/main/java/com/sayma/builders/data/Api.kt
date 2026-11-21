@@ -166,6 +166,42 @@ class Api(context: Context) {
             } catch (e: Exception) { throw network(e) }
         }
 
+    /** Clears only this device's stored PHP session cookies before switching account roles. */
+    fun clearLocalSession() {
+        jar.clear()
+        rememberedRole = ""
+    }
+
+    /** Loads a profile photo from a relative path or an absolute image URL using the saved PHP session. */
+    suspend fun profilePhotoBytes(reference: String): ByteArray? =
+        withContext(Dispatchers.IO) {
+            try {
+                val ref = reference.trim()
+                if (ref.isBlank()) return@withContext null
+                if (ref.contains("worker_view_profile_photo")) {
+                    return@withContext file("worker_view_profile_photo", emptyMap(), "profile-photo.jpg").bytes
+                }
+                val root = baseUrl.toHttpUrlOrNull() ?: return@withContext null
+                val url = ref.toHttpUrlOrNull() ?: root.resolve(ref.removePrefix("./")) ?: return@withContext null
+                client.newCall(Request.Builder().url(url).header("Accept", "image/*").build())
+                    .execute().use { response ->
+                        val mime = (response.header("Content-Type") ?: "").substringBefore(';').trim()
+                        if (!response.isSuccessful || !mime.startsWith("image/", true)) null else response.body?.bytes()
+                    }
+            } catch (_: Exception) { null }
+        }
+    /** Loads the authenticated Admin display profile from the existing profile.php endpoint. */
+    suspend fun adminProfile(): JSONObject =
+        withContext(Dispatchers.IO) {
+            try {
+                val root = baseUrl.toHttpUrlOrNull() ?: throw ApiException("সার্ভার ঠিকানা সঠিক নয়।")
+                val url = root.newBuilder().addPathSegment("profile.php").build()
+                val body = FormBody.Builder().add("action", "get").build()
+                client.newCall(
+                    Request.Builder().url(url).header("Accept", "application/json").post(body).build()
+                ).execute().use { parse(it.code, it.body?.string() ?: "") }
+            } catch (e: Exception) { throw network(e) }
+        }
     suspend fun logout(role: String) {
         try { post(if (role == "worker") "worker_logout" else "logout") } catch (_: Exception) {}
         jar.clear()

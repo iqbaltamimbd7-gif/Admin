@@ -13,6 +13,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
@@ -39,31 +40,35 @@ internal fun expiries(data: AdminData, withinDays: Long): List<Expiry> {
 }
 
 @Composable
-fun HomeScreen(data: AdminData, username: String, year: String, onYear: (String) -> Unit, open: (AdminScreen) -> Unit) {
+fun HomeScreen(data: AdminData, displayName: String, year: String, onYear: (String) -> Unit, open: (AdminScreen) -> Unit, openWorkers: () -> Unit) {
     val (due, paid, remaining) = data.totals(year)
     val activeSites = data.projects.count { it.status.contains("active", true) }
     val soon = expiries(data, 60)
     val trades = data.workers.groupBy { it.role }.map { it.key to it.value.size }.sortedByDescending { it.second }
 
     ScreenScroll {
-        ScreenHeader("Hi, ${username.substringBefore(' ')}.", "Your SAYMA workspace")
+        ScreenHeader("Hi, ${displayName.substringBefore(' ')}.", "Your SAYMA workspace", profileName = displayName)
 
-        // Hero
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(HeroBrush).padding(18.dp)) {
-            Text("● CONNECTED · ADMIN WORKSPACE", color = Color.White.copy(alpha = .85f), fontSize = 10.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(6.dp))
-            Text("Your projects.\nYour people. All in one place.", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
+        SearchPill("", {}, "Search workers, passport, project…")
+        Spacer(Modifier.height(14.dp))
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(HeroBrush).padding(20.dp)) {
+            Text("● SAYMA BUILDERS · ADMIN WORKSPACE", color = Color.White.copy(alpha = .9f), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             Spacer(Modifier.height(10.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                HeroPill("${data.workers.size} Workers"); HeroPill("$activeSites Active sites")
+            Text("Your projects.\nYour people. All in one place.", color = Color.White, fontSize = 25.sp, lineHeight = 29.sp, fontWeight = FontWeight.ExtraBold)
+            Spacer(Modifier.height(10.dp))
+            Text("Stay on top of your workforce, site activity and company performance.", color = Color.White.copy(alpha = .92f), fontSize = 13.sp, lineHeight = 19.sp)
+            Spacer(Modifier.height(16.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                HeroPill("${data.workers.size} Workers"); HeroPill("$activeSites Active sites"); HeroPill("Connected")
             }
         }
 
-        SectionTitle("Quick Links")
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            QuickTile("Attendance", Modifier.weight(1f)) { open(AdminScreen.Attendance) }
-            QuickTile("Documents", Modifier.weight(1f)) { open(AdminScreen.Documents) }
-            QuickTile("Requests", Modifier.weight(1f)) { open(AdminScreen.Requests) }
+        SectionTitle("Quick Links") { Text("Tap to open", color = Muted, fontSize = 11.sp) }
+        Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+            QuickTile("Workers", "♙", Color(0xFF9B4CC0), Modifier.weight(1f), openWorkers)
+            QuickTile("Projects", "⌂", Color(0xFF278FE2), Modifier.weight(1f)) { if (data.projects.isNotEmpty()) open(AdminScreen.ProjectDetail(data.projects.first())) }
+            QuickTile("Attendance", "◷", Color(0xFF36AE98), Modifier.weight(1f)) { open(AdminScreen.Attendance) }
+            QuickTile("Payments", "৳", Color(0xFFE34D63), Modifier.weight(1f)) { open(AdminScreen.Requests) }
         }
 
         SectionTitle("Permit payment collection") {
@@ -117,8 +122,20 @@ fun HomeScreen(data: AdminData, username: String, year: String, onYear: (String)
 @Composable private fun HeroPill(text: String) =
     Text(text, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = .2f)).padding(horizontal = 12.dp, vertical = 5.dp))
 
-@Composable private fun QuickTile(label: String, modifier: Modifier, onClick: () -> Unit) =
-    SaymaCard(modifier, onClick = onClick) { Text(label, fontWeight = FontWeight.Bold, color = Teal, fontSize = 13.sp) }
+@Composable
+private fun QuickTile(label: String, glyph: String, accent: Color, modifier: Modifier, onClick: () -> Unit) =
+    SaymaCard(modifier.height(112.dp), onClick = onClick) {
+        Box(
+            Modifier.size(37.dp).clip(RoundedCornerShape(13.dp))
+                .background(Brush.linearGradient(listOf(accent, accent.copy(alpha = .72f)))),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(glyph, color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(label, fontWeight = FontWeight.ExtraBold, color = Ink, fontSize = 11.sp, maxLines = 1)
+        Text(when(label) { "Workers" -> "Team directory"; "Projects" -> "Site management"; "Attendance" -> "Daily records"; else -> "Finance overview" }, color = Muted, fontSize = 9.sp, maxLines = 2)
+    }
 
 @Composable
 internal fun ExpiryRow(e: Expiry) {

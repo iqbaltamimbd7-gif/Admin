@@ -3,13 +3,18 @@ package com.sayma.builders.ui.admin
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -18,17 +23,86 @@ import com.sayma.builders.data.*
 import com.sayma.builders.ui.*
 import kotlinx.coroutines.launch
 
+private fun workerOptionKey(worker: WorkerRec, index: Int): String {
+    val identity = listOf(worker.raw.str("id"), worker.raw.str("worker_id"), worker.passport, worker.email, worker.mobile, worker.name)
+        .firstOrNull { it.isNotBlank() }.orEmpty()
+    return "$identity#$index"
+}
+
 @Composable
 fun WorkersScreen(data: AdminData, onOpen: (WorkerRec) -> Unit) {
     var q by remember { mutableStateOf("") }
-    val list = data.workers.filter { "${it.name} ${it.role} ${it.passport} ${it.site}".contains(q, true) }
+    var expanded by remember { mutableStateOf(false) }
+    val options = data.workers.mapIndexed { index, worker -> worker to workerOptionKey(worker, index) }
+    var selectedOptionKey by remember(options.map { it.second }) { mutableStateOf(options.firstOrNull()?.second.orEmpty()) }
+    val filtered = options.filter { (worker, _) ->
+        "${worker.name} ${worker.role} ${worker.passport} ${worker.site} ${worker.email} ${worker.mobile}".contains(q, true)
+    }
+    val selected = options.firstOrNull { it.second == selectedOptionKey }?.first ?: options.firstOrNull()?.first
+
     ScreenScroll {
         ScreenHeader("Workers", "${data.workers.size} workforce profiles")
-        LabeledField(q, { q = it }, "Search worker, role or passport…")
-        SectionTitle("Team directory")
+        SearchPill(q, { q = it }, "Search worker, role, passport or email…")
+        SectionTitle("Select a worker") { Text("Showing ${filtered.size} of ${data.workers.size}", color = Muted, fontSize = 10.sp) }
+        Box(Modifier.fillMaxWidth()) {
+            OutlinedButton(
+                onClick = { expanded = true },
+                modifier = Modifier.fillMaxWidth().heightIn(min = 58.dp),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(Modifier.weight(1f), horizontalAlignment = androidx.compose.ui.Alignment.Start) {
+                    Text(selected?.name ?: "Choose a worker", fontWeight = FontWeight.Bold, maxLines = 1)
+                    if (selected != null) Text("${selected.role} · ${selected.passport.ifBlank { selected.email.ifBlank { "No ID" } }}", color = Muted, fontSize = 11.sp, maxLines = 1)
+                }
+                Text("▾", color = Teal, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            }
+            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, modifier = Modifier.heightIn(max = 420.dp)) {
+                filtered.forEach { (worker, optionKey) ->
+                    DropdownMenuItem(
+                        text = {
+                            Column {
+                                Text(worker.name.ifBlank { "Unnamed worker" }, fontWeight = FontWeight.Bold)
+                                Text(listOf(worker.role, worker.passport, worker.email).filter { it.isNotBlank() }.joinToString(" · "), color = Muted, fontSize = 11.sp, maxLines = 1)
+                            }
+                        },
+                        onClick = { selectedOptionKey = optionKey; expanded = false }
+                    )
+                }
+            }
+        }
+
+        selected?.let { worker ->
+            Spacer(Modifier.height(10.dp))
+            SaymaCard {
+                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Avatar(worker.name, 46)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(worker.name.ifBlank { "Unnamed worker" }, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+                        Text(worker.role, color = Muted, fontSize = 12.sp)
+                    }
+                    Chip("SELECTED", Teal)
+                }
+                Spacer(Modifier.height(8.dp))
+                InfoLine("Passport / ID", worker.passport)
+                InfoLine("Assigned site", worker.site)
+                InfoLine("Email", worker.email)
+                InfoLine("Mobile", worker.mobile)
+                InfoLine("Daily rate", rm(worker.rate))
+                GradientButton("Open profile & edit", Modifier.fillMaxWidth()) { onOpen(worker) }
+            }
+        }
+
+        SectionTitle("All workers (${filtered.size})")
         SaymaCard {
-            if (list.isEmpty()) EmptyState("No matching workers")
-            list.forEach { w -> ListRow(w.name, "${w.role} · ${w.passport.ifBlank { "No passport" }}", rm(w.rate), "/day", w.name) { onOpen(w) } }
+            if (filtered.isEmpty()) EmptyState("No matching workers", "Clear the search or refresh the worker data.")
+            else filtered.forEach { (worker, optionKey) ->
+                ListRow(
+                    worker.name.ifBlank { "Unnamed worker" },
+                    "${worker.role} · ${worker.passport.ifBlank { worker.email.ifBlank { "No ID" } }}",
+                    rm(worker.rate), "/day", worker.name
+                ) { selectedOptionKey = optionKey; onOpen(worker) }
+            }
         }
     }
 }
@@ -316,14 +390,13 @@ fun FinanceScreen(data: AdminData, year: String, onYear: (String) -> Unit) {
     ScreenScroll {
         ScreenHeader("Finance", "Permit payments & payroll overview")
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { data.years.forEach { y -> FilterChip(selected = y == year, onClick = { onYear(y) }, label = { Text(y) }) } }
-        Spacer(Modifier.height(8.dp))
-        Column(Modifier.fillMaxWidth().then(Modifier).padding(0.dp)) {
-            SaymaCard {
-                Text("PERMIT BUDGET · $year", color = Teal, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                Text(rm(due), fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
-                Text("${rm(paid)} paid · ${rm(remaining)} outstanding", color = Muted)
-                ProgressBar(if (due > 0) (paid / due).toFloat() else 0f, Modifier.padding(top = 8.dp))
-            }
+        Spacer(Modifier.height(10.dp))
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp)).background(Brush.linearGradient(listOf(Color(0xFF173454), Color(0xFF24639A), Color(0xFF5A8FB3)))).padding(20.dp)) {
+            Text("PERMIT BUDGET · $year", color = Color.White.copy(alpha = .78f), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            Spacer(Modifier.height(10.dp))
+            Text(rm(due), color = Color.White, fontSize = 31.sp, fontWeight = FontWeight.ExtraBold)
+            Text("${rm(paid)} paid · ${rm(remaining)} outstanding", color = Color.White.copy(alpha = .86f), fontSize = 12.sp)
+            ProgressBar(if (due > 0) (paid / due).toFloat() else 0f, Modifier.padding(top = 14.dp))
         }
         SectionTitle("Permit ledger")
         SaymaCard {
