@@ -86,7 +86,7 @@ fun DocumentsScreen(onBack: () -> Unit) {
         BackBar("Documents", "Company documents", onBack)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             GradientButton("+ Upload document", Modifier.weight(1f)) {
-                val cats = (state as? UiState.Ready)?.value?.second ?: emptyList()
+                val cats = (state as? UiState.Ready<Pair<List<org.json.JSONObject>, List<String>>>)?.value?.second ?: emptyList()
                 openNew(cats)
             }
             SoftButton("↻ Refresh", onClick = reload.trigger)
@@ -120,7 +120,7 @@ fun DocumentsScreen(onBack: () -> Unit) {
     }
 
     if (showForm) {
-        val cats = (state as? UiState.Ready)?.value?.second ?: emptyList()
+        val cats = (state as? UiState.Ready<Pair<List<org.json.JSONObject>, List<String>>>)?.value?.second ?: emptyList()
         AlertDialog(
             onDismissRequest = { if (!saving) showForm = false },
             title = { Text(if (editing == null) "Upload company document" else "Update company document") },
