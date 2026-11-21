@@ -3,7 +3,10 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
-val baseUrl: String = (project.findProperty("SAYMA_BASE_URL") as String?) ?: "https://YOUR-DOMAIN.com/portal/"
+val baseUrl: String = (project.findProperty("SAYMA_BASE_URL") as String?)
+    ?.trim()
+    ?.let { if (it.endsWith("/")) it else "$it/" }
+    ?: "https://saymabuilders.com/portal/"
 
 android {
     namespace = "com.sayma.builders"
