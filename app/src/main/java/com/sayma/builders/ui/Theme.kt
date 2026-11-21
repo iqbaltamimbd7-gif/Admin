@@ -24,7 +24,8 @@ val Line = Color(0xFFE2ECEA)
 val Good = Color(0xFF2E9E6B)
 val Bad = Color(0xFFD9534F)
 val Warn = Color(0xFFE59A2F)
-val HeroBrush = Brush.linearGradient(listOf(Teal, Color(0xFF4B8F9A), Orchid))
+val HeroBrush = Brush.linearGradient(listOf(Color(0xFF16838A), Color(0xFF648EAA), Color(0xFFD58EAF)))
+val ScreenBrush = Brush.linearGradient(listOf(Color(0xFFEAF4F2), Color(0xFFF9EEF5), Color(0xFFF2EFF8)))
 
 private val Scheme = lightColorScheme(
     primary = Teal, onPrimary = Color.White, secondary = Orchid, tertiary = Rose,
