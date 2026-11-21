@@ -3,7 +3,7 @@ name: Build SAYMA Android APK
 on:
   workflow_dispatch:
   push:
-    branches: [ main, master, mobile-ui-gps-polish-20261122 ]
+    branches: [ main, master, mobile-ui-gps-polish-20261122, sayma-webview-online-offline-20261122 ]
 
 jobs:
   build:
@@ -18,7 +18,7 @@ jobs:
         uses: android-actions/setup-android@v4
         with:
           # Do not request the retired "tools" SDK package.
-          packages: platform-tools
+          packages: platform-tools platforms;android-35 build-tools;35.0.0
       - uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: '8.7'
